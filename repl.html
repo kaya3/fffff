@@ -1,0 +1,106 @@
+<!doctype HTML>
+<html>
+<head>
+<title>fffff REPL</title>
+<script src="ops.js"></script>
+<script src="values.js"></script>
+<script src="parser.js"></script>
+<script src="main.js"></script>
+<style type="text/css">
+html, body {
+	margin: 0; padding: 0;
+	width: 100%; height: 100%;
+	background-color: black;
+	display: flex;
+}
+#console_container {
+	overflow-y: auto;
+	flex-grow: 1;
+}
+body, #input, #output {
+	font-family: 'DejaVu Sans Mono', 'Menlo', 'Consolas', 'Lucida Console', monospace;
+}
+#output, #input_container, #input {
+	border:0; padding: 0; margin: 0; outline: 0;
+	color: #00d000;
+	font-size: 18px;
+	tab-size: 4;
+	white-space: pre-wrap;
+}
+#input_container { display: flex; flex-basis: 2em; }
+#input {
+	background-color: black;
+	flex-grow: 1;
+}
+#console_container { padding: 1em; }
+</style>
+</head>
+<body>
+<div id="console_container">
+<pre id="output"></pre>
+<div id="input_container"><label for="input" id="input_label"></label><input id="input" autofocus spellcheck="false"></div>
+</div>
+<script type="text/javascript">
+var consoleContainer = document.getElementById('console_container');
+var inputContainer = document.getElementById('input_container');
+var inputLabel = document.getElementById('input_label');
+var inputElement = document.getElementById('input');
+var outputPanel = document.getElementById('output');
+function s() { return window.getSelection ? window.getSelection().toString() : (document.selection && document.selection.type != "Control") ? document.selection.createRange().text : ''; }
+consoleContainer.onclick = function() { if(!s()) { inputElement.focus(); } };
+function out(s) {
+	outputPanel.appendChild(document.createTextNode(s));
+}
+
+var parser, interpreter;
+
+inputElement.addEventListener('keydown', function(e) {
+	if(e.keyCode === 13) {
+		try {
+			out(inputLabel.innerText + inputElement.value + '\n');
+			parser.read(inputElement.value.trim());
+			var q = parser.parse();
+			if(q) {
+				interpreter.execQuote(q);
+				inputLabel.innerText = '>>> ';
+				out('\n' + interpreter.toString());
+			} else {
+				inputLabel.innerText = '... ';
+			}
+		} catch(e) {
+			out(e.message + '\n');
+			out(interpreter.stackTrace());
+			out('\n' + interpreter.toString());
+		}
+		consoleContainer.scrollTop = consoleContainer.scrollHeight;
+		inputElement.value = '';
+		e.preventDefault();
+		return false;
+	}
+});
+window.addEventListener('keydown', function(e) {
+	if((e.ctrlKey || e.metaKey) && String.fromCharCode(e.which).toLowerCase() === 'r') {
+		reset();
+		e.preventDefault();
+		return false;
+	}
+});
+
+function reset() {
+	outputPanel.innerHTML = '';
+	try {
+		parser = new Parser();
+		interpreter = new Interpreter(out);
+		
+		out(interpreter.toString());
+		inputLabel.innerText = '>>> ';
+		inputElement.value = '';
+		inputElement.focus();
+	} catch(e) {
+		out('Error: ' + e + '\n');
+	}
+}
+reset();
+</script>
+</body>
+</html>

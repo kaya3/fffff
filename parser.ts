@@ -1,9 +1,14 @@
 interface Array<T> {
 	peek(): T;
+	clear(): void;
 }
 Array.prototype.peek = function() {
 	if(this.length === 0) { throw new Error('Peek at empty stack'); }
 	return this[this.length-1];
+};
+Array.prototype.clear = function() {
+	// this is allowed because JavaScript is silly
+	this.length = 0;
 };
 
 class Parser {
@@ -74,7 +79,7 @@ class Parser {
 			++this.pos;
 			q.ops.push(NativeOp.NOW);
 		} else if(c === '.') {
-			if(++this.pos == this.src.length) {
+			if(++this.pos === this.src.length) {
 				throw new Error("Unexpected end of source: expected .[ or .{ or .identifier");
 			}
 			
@@ -134,7 +139,7 @@ class Parser {
 				
 				do {
 					a.names.push(this.nextIdentifier(true));
-				} while(this.pos < this.src.length && this.src[this.pos] === '.');
+				} while(this.pos < this.src.length && this.src[this.pos] === '.' && ++this.pos < this.src.length /* skip the . */);
 				
 				assignments.push(a);
 			} while(this.pos < this.src.length && this.src[this.pos] === ',');
@@ -232,14 +237,14 @@ class Parser {
 		try {
 			if(isDouble) {
 				// TODO
-				throw new Error('Doubles are not implemented');
+				throw new Error('Error: doubles are not implemented');
 				return new DoubleValue(parseFloat(n));
 			} else {
 				// TODO: use bigint?
 				return new IntValue(parseInt(n));
 			}
 		} catch(e) {
-			throw new Error("Invalid numeric literal " + n + " at position " + startPos);
+			throw new Error("Syntax error: invalid numeric literal " + n + " at position " + startPos);
 		}
 	}
 	

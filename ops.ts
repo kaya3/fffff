@@ -5,13 +5,14 @@ type Op
 	| AssignOp
 	| NativeOp
 	| QuotedOp
-	| CommentOp;
+	| CommentOp
+	;
 
 class PushOp {
 	public constructor(public readonly v: Value) {}
 	
-	public toString(): string {
-		return this.v.toString();
+	public repr(): string {
+		return this.v.repr();
 	}
 }
 
@@ -19,7 +20,7 @@ class QuotedOp {
 	public constructor(public readonly q: Quote) {}
 	
 	private isStringing: boolean = false;
-	public toString(): string {
+	public repr(): string {
 		if(this.isStringing) {
 			return '(...)';
 		} else {
@@ -30,7 +31,7 @@ class QuotedOp {
 			for(let i: number = 0; i < this.q.ops.length; ++i) {
 				sb.push(glue);
 				glue = ' ';
-				sb.push(this.q.ops[i].toString());
+				sb.push(this.q.ops[i].repr());
 			}
 			
 			this.isStringing = false;
@@ -43,7 +44,7 @@ class QuotedOp {
 class AssignOp {
 	public constructor(public readonly name: string, public readonly doNow: boolean) {}
 	
-	public toString(): string {
+	public repr(): string {
 		return '>' + this.name;
 	}
 }
@@ -51,7 +52,7 @@ class AssignOp {
 class CommentOp {
 	public constructor(public readonly s: string) {}
 	
-	public toString(): string {
+	public repr(): string {
 		return '#' + this.s + '\n';
 	}
 }
@@ -59,7 +60,7 @@ class CommentOp {
 class ReadOp {
 	public constructor(public readonly name: string) {}
 	
-	public toString(): string {
+	public repr(): string {
 		return this.name;
 	}
 }
@@ -67,12 +68,25 @@ class ReadOp {
 class LocalReadOp {
 	public constructor(public readonly name: string) {}
 	
-	public toString(): string {
+	public repr(): string {
 		return this.name;
 	}
 }
 
 class NativeOp {
+	private static opsArray: Array<NativeOp> = [];
+	private static opsMap: { [k: string]: NativeOp } = Object.create(null);
+	
+	public static getByOpCode(opCode: number): NativeOp {
+		if(opCode < 1 || opCode >= NativeOp.opsArray.length) {
+			throw new Error('Illegal state: unknown opcode ' + opCode);
+		}
+		return NativeOp.opsArray[opCode-1];
+	}
+	public static getByName(name: string): NativeOp|null {
+		return NativeOp.opsMap[name] || null;
+	}
+	
 	public static readonly STACK_DESCEND: NativeOp = new NativeOp('[');
 	public static readonly STACK_ASCEND: NativeOp = new NativeOp(']');
 	public static readonly STACK_ENTER: NativeOp = new NativeOp('.[');
@@ -84,6 +98,9 @@ class NativeOp {
 	public static readonly SCOPE_EXIT: NativeOp = new NativeOp('}.');
 	
 	public static readonly NOW: NativeOp = new NativeOp('!');
+	
+	public static readonly TRUE: NativeOp = new NativeOp('true');
+	public static readonly FALSE: NativeOp = new NativeOp('false');
 	
 	// TODO: imports?
 	public static readonly IMPORT: NativeOp = new NativeOp('import');
@@ -127,19 +144,6 @@ class NativeOp {
 	public static readonly LESS_THAN_OR_EQUAL: NativeOp = new NativeOp('<=');
 	public static readonly GREATER_THAN_OR_EQUAL: NativeOp = new NativeOp('>=');
 	
-	private static opsArray: Array<NativeOp> = [];
-	private static opsMap: { [k: string]: NativeOp } = Object.create(null);
-	
-	public static getByOpCode(opCode: number): NativeOp {
-		if(opCode < 1 || opCode >= NativeOp.opsArray.length) {
-			throw new Error('Illegal opcode ' + opCode);
-		}
-		return NativeOp.opsArray[opCode-1];
-	}
-	public static getByName(name: string): NativeOp|null {
-		return NativeOp.opsMap[name] || null;
-	}
-	
 	public readonly opCode: number;
 	private constructor(public readonly name: string) {
 		NativeOp.opsMap[name] = this;
@@ -147,7 +151,7 @@ class NativeOp {
 		this.opCode = NativeOp.opsArray.length;
 	}
 	
-	public toString(): string {
+	public repr(): string {
 		return this.name;
 	}
 }

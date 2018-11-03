@@ -8,20 +8,31 @@ type Value
 	| Scope
 	;
 
-function typecheck<T>(v: any, clazz: { new(): T }) {
-	if(v instanceof clazz) {
+type ValueTypeTags = {
+	'string': StringValue,
+	'int': IntValue,
+	'boolean': BoolValue,
+	'double': DoubleValue,
+	'quote': Quote,
+	'stack': VStack,
+	'scope': Scope
+};
+
+function typecheck<T extends Value['type']>(v: Value, typeTag: T): ValueTypeTags[T] {
+	if(v.type === typeTag) {
 		return v;
 	} else {
-		// TODO: does constructor.name work?
-		throw new Error('Type error: expected ' + clazz + ', was ' + v.constructor.name);
+		throw new Error('Type error: expected ' + typeTag + ', was ' + v.type);
 	}
 }
 
 
 class StringValue {
+	public type: 'string' = 'string';
+	
 	public constructor(public readonly v: string) {}
 	
-	public toString(): string {
+	public repr(): string {
 		let singleQuotes: number = 0;
 		let doubleQuotes: number = 0;
 		for(let i: number = 0; i < this.v.length; ++i) {
@@ -36,7 +47,7 @@ class StringValue {
 		}
 		
 		let d: string = (singleQuotes <= doubleQuotes ? "'" : '"');
-		let sb: Array<string> = [];
+		let sb: Array<string> = [d];
 		for(let i: number = 0; i < this.v.length; ++i) {
 			let c = this.v[i];
 			switch(c) {
@@ -59,8 +70,8 @@ class StringValue {
 					sb.push("\\\\");
 					break;
 				
-				case '\'':
 				case '"':
+				case "'":
 					if(c === d) {
 						sb.push("\\");
 					}
@@ -77,12 +88,24 @@ class StringValue {
 					}
 			}
 		}
+		sb.push(d);
 		return sb.join('');
+	}
+	
+	public toString(): string {
+		return this.v;
 	}
 }
 
 class IntValue {
-	public constructor(public readonly v: number) {}
+	public type: 'int' = 'int';
+	
+	public readonly v: number;
+	public constructor(v: number) { this.v = v|0; }
+	
+	public repr(): string {
+		return this.v.toString();
+	}
 	
 	public toString(): string {
 		return this.v.toString();
@@ -90,13 +113,23 @@ class IntValue {
 }
 
 class BoolValue {
+	public type: 'boolean' = 'boolean';
+	
 	public static readonly TRUE: BoolValue = new BoolValue(true);
 	public static readonly FALSE: BoolValue = new BoolValue(false);
+	
+	public static of(b: boolean): BoolValue {
+		return b ? BoolValue.TRUE : BoolValue.FALSE;
+	}
 	
 	public static readonly PUSH_TRUE: PushOp = new PushOp(BoolValue.TRUE);
 	public static readonly PUSH_FALSE: PushOp = new PushOp(BoolValue.FALSE);
 	
 	private constructor(public readonly v: boolean) {}
+	
+	public repr(): string {
+		return this.v ? 'true' : 'false';
+	}
 	
 	public toString(): string {
 		return this.v ? 'true' : 'false';
@@ -104,7 +137,13 @@ class BoolValue {
 }
 
 class DoubleValue {
+	public type: 'double' = 'double';
+	
 	public constructor(readonly v: number) {}
+	
+	public repr(): string {
+		return this.v.toString();
+	}
 	
 	public toString(): string {
 		return this.v.toString();
@@ -112,43 +151,94 @@ class DoubleValue {
 }
 
 class Quote {
+	public type: 'quote' = 'quote';
+	
 	readonly ops: Array<Op> = [];
+	
+	private isStringing: boolean = false;
+	public repr(): string {
+		if(this.isStringing) {
+			return "(...)";
+		} else {
+			this.isStringing = true;
+			let sb: Array<string> = ['('];
+			
+			let glue: string = '';
+			for(let i: number = 0; i < this.ops.length; ++i) {
+				sb.push(glue);
+				glue = ' ';
+				sb.push(this.ops[i].repr());
+			}
+			
+			sb.push(')');
+			this.isStringing = false;
+			return sb.join('');
+		}
+	}
+	
+	public toString(): string {
+		return this.repr();
+	}
 }
 
 class VStack {
+	public type: 'stack' = 'stack';
+	
 	readonly v: Array<Value> = [];
 	
-	public peek<T extends Value>(clazz: { new(): T }): T {
-		return typecheck(this.v.peek(), clazz);
+	public peek<T extends Value['type']>(typeTag: T): ValueTypeTags[T] {
+		return typecheck(this.v.peek(), typeTag);
 	}
 	
-	public pop<T extends Value>(clazz: { new(): T }): T {
-		if(this.v.length === 0) { throw new Error('Pop from empty stack'); }
-		return typecheck(this.v.pop(), clazz);
+	public pop<T extends Value['type']>(typeTag: T): ValueTypeTags[T] {
+		return typecheck(this.popAny(), typeTag);
+	}
+	
+	public peekAny(): Value {
+		return this.v.peek();
+	}
+	
+	public popAny(): Value {
+		if(this.v.length === 0) { throw new Error('Illegal state: pop from empty stack'); }
+		return this.v.pop() as Value;
+	}
+	
+	public get(index: number): Value {
+		if(index < 0 || index >= this.v.length) {
+			throw new Error('Illegal index: ' + index + ' from length ' + this.v.length);
+		}
+		return this.v[index];
 	}
 	
 	private isStringing: boolean = false;
-	public toString(): string {
+	public repr(): string {
 		if(this.isStringing) {
 			return '[...].';
 		} else {
 			this.isStringing = true;
-			let sb: Array<string> = [];
+			let sb: Array<string> = ['['];
 			
 			let glue: string = '';
 			for(let i: number = 0; i < this.v.length; ++i) {
 				sb.push(glue);
 				glue = ' ';
-				sb.push(this.v[i].toString());
+				sb.push(this.v[i].repr());
 			}
 			
+			sb.push('].');
 			this.isStringing = false;
 			return sb.join('');
 		}
 	}
+	
+	public toString(): string {
+		return this.repr();
+	}
 }
 
 class Scope {
+	public type: 'scope' = 'scope';
+	
 	private readonly v: { [k: string]: PushOp|QuotedOp } = Object.create(null);
 	
 	public read(name: string): Op|null {
@@ -176,7 +266,7 @@ class Scope {
 	}
 	
 	private isStringing: boolean = false;
-	public toString(): string {
+	public repr(): string {
 		if(this.isStringing) {
 			return '{...}.';
 		} else {
@@ -191,10 +281,10 @@ class Scope {
 					
 					let op: Op = this.v[k];
 					if(op instanceof PushOp) {
-						sb.push(op.v.toString());
+						sb.push(op.v.repr());
 						sb.push('>');
 					} else {
-						sb.push(op.q.toString());
+						sb.push(op.q.repr());
 						sb.push('>!');
 					}
 					sb.push(k);
@@ -205,6 +295,10 @@ class Scope {
 			this.isStringing = false;
 			return sb.join('');
 		}
+	}
+	
+	public toString(): string {
+		return this.repr();
 	}
 }
 
