@@ -3,7 +3,8 @@
         "strict": true
     },
     "files": [
-        "main.ts",
+		"main.ts",
+		"parser.ts",
         "tests.ts"
     ]
 }
