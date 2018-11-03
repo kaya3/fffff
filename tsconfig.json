@@ -3,7 +3,10 @@
         "strict": true
     },
     "files": [
-        "main.ts",
+		"main.ts",
+		"parser.ts",
+		"values.ts",
+		"ops.ts",
         "tests.ts"
     ]
 }
