@@ -122,9 +122,6 @@ class BoolValue {
 		return b ? BoolValue.TRUE : BoolValue.FALSE;
 	}
 	
-	public static readonly PUSH_TRUE: PushOp = new PushOp(BoolValue.TRUE);
-	public static readonly PUSH_FALSE: PushOp = new PushOp(BoolValue.FALSE);
-	
 	private constructor(public readonly v: boolean) {}
 	
 	public repr(): string {
@@ -301,4 +298,3 @@ class Scope {
 		return this.repr();
 	}
 }
-

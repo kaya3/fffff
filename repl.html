@@ -92,6 +92,7 @@ function reset() {
 		parser = new Parser();
 		interpreter = new Interpreter(out);
 		
+		out('fffff REPL\n\n');
 		out(interpreter.toString());
 		inputLabel.innerText = '>>> ';
 		inputElement.value = '';

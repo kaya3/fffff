@@ -103,8 +103,6 @@ var BoolValue = /** @class */ (function () {
     };
     BoolValue.TRUE = new BoolValue(true);
     BoolValue.FALSE = new BoolValue(false);
-    BoolValue.PUSH_TRUE = new PushOp(BoolValue.TRUE);
-    BoolValue.PUSH_FALSE = new PushOp(BoolValue.FALSE);
     return BoolValue;
 }());
 var DoubleValue = /** @class */ (function () {

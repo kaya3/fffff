@@ -3,7 +3,7 @@ interface Array<T> {
 	clear(): void;
 }
 Array.prototype.peek = function() {
-	if(this.length === 0) { throw new Error('Peek at empty stack'); }
+	if(this.length === 0) { throw new Error('Illegal state: peek at empty stack'); }
 	return this[this.length-1];
 };
 Array.prototype.clear = function() {
@@ -17,7 +17,7 @@ class Parser {
 		p.read(src);
 		let q: Quote|null = p.parse();
 		if(q === null) {
-			throw new Error("Unexpected end of source: expected )");
+			throw new Error('Syntax error: unexpected end of source');
 		}
 		return q;
 	}
@@ -47,7 +47,7 @@ class Parser {
 		}
 		
 		if(this.quotes.length === 1 && this.stringLiteralBuilder === null) {
-			return this.quotes.pop() || null;
+			return this.quotes.pop() as Quote;
 		} else {
 			return null;
 		}
@@ -73,14 +73,14 @@ class Parser {
 				this.quotes.pop();
 				this.quotes.peek().ops.push(new PushOp(q));
 			} else {
-				throw new Error("Unexpected ) at position " + this.pos);
+				throw new Error("Syntax error: unexpected character ) at position " + this.pos);
 			}
 		} else if(c === '!') {
 			++this.pos;
 			q.ops.push(NativeOp.NOW);
 		} else if(c === '.') {
 			if(++this.pos === this.src.length) {
-				throw new Error("Unexpected end of source: expected .[ or .{ or .identifier");
+				throw new Error("Syntax error: unexpected end of source: expected .[ or .{ or .identifier");
 			}
 			
 			c = this.src[this.pos];
@@ -96,7 +96,7 @@ class Parser {
 				q.ops.push(new LocalReadOp(name));
 				q.ops.push(NativeOp.SCOPE_ASCEND);
 			} else {
-				throw new Error("Unexpected character " + c + " at position " + this.pos);
+				throw new Error("Syntax error: unexpected character " + c + " at position " + this.pos);
 			}
 		} else if(c === '[') {
 			++this.pos;
@@ -118,7 +118,7 @@ class Parser {
 				++this.pos;
 				q.ops.push(NativeOp.SCOPE_EXIT);
 			}
-		} else if(c === '"' || c === '\'') {
+		} else if(c === '"' || c === "'") {
 			this.stepStringLiteral(q);
 		} else if(this.digitChar(c) || (c === '-' && this.pos+1 < this.src.length && this.digitChar(this.src[this.pos+1]))) {
 			q.ops.push(new PushOp(this.nextNumber()));
@@ -177,7 +177,7 @@ class Parser {
 			// apply op
 			q.ops.push(new ReadOp(this.nextOpName()));
 		} else {
-			throw new Error("Unexpected character " + c + " at position " + this.pos);
+			throw new Error("Syntax error: unexpected character " + c + " at position " + this.pos);
 		}
 	}
 	
@@ -219,12 +219,12 @@ class Parser {
 			let c: string = this.src[this.pos];
 			if(c === '.') {
 				if(isDouble) {
-					throw new Error("Unexpected character . at position " + this.pos);
+					throw new Error("Syntax error: unexpected character . at position " + this.pos);
 				}
 				isDouble = true;
 			} else if(c === 'e' || c === 'E') {
 				if(hasExponent) {
-					throw new Error("Unexpected character " + c + " at position " + this.pos);
+					throw new Error("Syntax error: unexpected character " + c + " at position " + this.pos);
 				}
 				hasExponent = true;
 			} else if(!this.digitChar(c)) {
@@ -267,7 +267,7 @@ class Parser {
 			switch(c) {
 				case '\\':
 					if(this.pos === this.src.length) {
-						throw new Error("Unexpected end of source: expected escape sequence in String literal");
+						throw new Error("Syntax error: unexpected end of source: expected escape sequence in String literal");
 					}
 					
 					switch(c = this.src[++this.pos]) {
@@ -295,7 +295,7 @@ class Parser {
 						
 						case 'u':
 							if(this.pos + 4 > this.src.length) {
-								throw new Error("Unexpected end of source: expected unicode escape sequence in String literal");
+								throw new Error("Syntax error: unexpected end of source: expected unicode escape sequence in String literal");
 							}
 							let hex: number = parseInt(this.src.substring(this.pos, this.pos+4), 16);
 							this.stringLiteralBuilder.push(String.fromCharCode(hex));
@@ -303,13 +303,13 @@ class Parser {
 							break;
 						
 						default:
-							throw new Error("Unknown escape sequence \\" + c + " in String literal at position " + this.pos);
+							throw new Error("Syntax error: unknown escape sequence \\" + c + " in String literal at position " + this.pos);
 					}
 					break;
 				
 				case '\n':
 					if(this.stringLiteralDelimiter.length === 1) {
-						throw new Error("Unexpected newline in String literal at position " + this.pos + " (use triple delimiter?)");
+						throw new Error("Syntax error: unexpected newline in String literal at position " + this.pos + " (use triple delimiter?)");
 					} else {
 						this.stringLiteralBuilder.push('\n');
 					}
@@ -333,7 +333,7 @@ class Parser {
 		if(this.stringLiteralDelimiter.length === 3) {
 			this.stringLiteralBuilder.push("\n");
 		} else {
-			throw new Error("Unexpected end of source: expected delimiter " + this.stringLiteralDelimiter + " in String literal");
+			throw new Error("Syntax error: unexpected end of source: expected delimiter " + this.stringLiteralDelimiter + " in String literal");
 		}
 	}
 	
@@ -341,11 +341,11 @@ class Parser {
 		let startPos: number = this.pos;
 		while(++this.pos < this.src.length && this.identifierChar(this.src[this.pos]));
 		if(startPos === this.pos || this.digitChar(this.src.charAt(startPos))) {
-			throw new Error("Expected identifier at position " + startPos);
+			throw new Error("Syntax error: expected identifier at position " + startPos);
 		}
 		let name: string = this.src.substring(startPos, this.pos);
 		if(throwIfKeyword && NativeOp.getByName(name) !== null) {
-			throw new Error("Unexpected keyword " + name + " at position " + startPos);
+			throw new Error("Syntax error: unexpected keyword " + name + " at position " + startPos);
 		}
 		return name;
 	}

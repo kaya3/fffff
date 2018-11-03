@@ -1,0 +1,47 @@
+<!doctype HTML>
+<html>
+<head>
+<title>fffff Compiler</title>
+<script src="ops.js"></script>
+<script src="values.js"></script>
+<script src="parser.js"></script>
+<script src="main.js"></script>
+<script src="bytecode.js"></script>
+<style type="text/css">
+#src { width: 100%; height: 50vh; resize: none; }
+</style>
+</head>
+<body>
+<textarea id="src" spellcheck="false">
+(1 2 3) 6 repeat
+</textarea>
+<button id="compile">Compile</button>
+<pre id="error_message"></pre>
+<h2>Compiled output</h2>
+<pre id="compiled_output"></pre>
+<h2>Decompiled output</h2>
+<pre id="decompiled_output"></pre>
+<script type="text/javascript">
+	var src = document.getElementById('src');
+	var error_message = document.getElementById('error_message');
+	var compiled_output = document.getElementById('compiled_output');
+	var decompiled_output = document.getElementById('decompiled_output');
+	function compile() {
+		error_message.innerText = '';
+		compiled_output.innerText = '';
+		decompiled_output.innerText = '';
+		try {
+			var q = Parser.parse(src.value);
+			var co = new CodeObject(q);
+			let j = co.toJSON();
+			compiled_output.innerText = JSON.stringify(j);
+			decompiled_output.innerText = decompile(j);
+		} catch(e) {
+			error_message.innerText = e.message;
+			throw e;
+		}
+	}
+	document.getElementById('compile').addEventListener('click', compile);
+</script>
+</body>
+</html>
