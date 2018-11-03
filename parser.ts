@@ -2,36 +2,26 @@ interface Array<T> {
 	peek(): T;
 }
 Array.prototype.peek = function() {
+	if(this.length === 0) { throw new Error('Peek at empty stack'); }
 	return this[this.length-1];
 };
 
-class Quote {
-	readonly ops: Array<Op> = [];
-}
-
-interface Op {}
-interface Value {}
-
 class Parser {
-	private static parse(src: string, keepComments: boolean = false): Quote {
+	public static parse(src: string, keepComments: boolean = false): Quote {
 		let p: Parser = new Parser(keepComments);
 		p.read(src);
-		let q: Quote = p.parse();
+		let q: Quote|null = p.parse();
 		if(q === null) {
 			throw new Error("Unexpected end of source: expected )");
 		}
 		return q;
 	}
 	
-	private src: string;
+	private src: string = '';
 	private readonly quotes: Array<Quote> = [];
 	private pos: number = 0;
-	private readonly keepComments: boolean;
 	
-	public constructor(keepComments: boolean = false) {
-		this.keepComments = keepComments;
-		this.src = "";
-	}
+	public constructor(private readonly keepComments: boolean = false) {}
 	
 	public read(src: string): void {
 		this.src = src;
@@ -52,7 +42,7 @@ class Parser {
 		}
 		
 		if(this.quotes.length === 1 && this.stringLiteralBuilder === null) {
-			return this.quotes.pop();
+			return this.quotes.pop() || null;
 		} else {
 			return null;
 		}
@@ -67,7 +57,7 @@ class Parser {
 			let startPos: number = ++this.pos;
 			this.stepComment();
 			if(this.keepComments) {
-				q.ops.push(new Comment(this.src.substring(startPos, this.pos)));
+				q.ops.push(new CommentOp(this.src.substring(startPos, this.pos)));
 			}
 		} else if(c === '(') {
 			++this.pos;
@@ -82,7 +72,7 @@ class Parser {
 			}
 		} else if(c === '!') {
 			++this.pos;
-			q.ops.push(MetaOp.NOW);
+			q.ops.push(NativeOp.NOW);
 		} else if(c === '.') {
 			if(++this.pos == this.src.length) {
 				throw new Error("Unexpected end of source: expected .[ or .{ or .identifier");
@@ -91,37 +81,37 @@ class Parser {
 			c = this.src[this.pos];
 			if(c === '['){
 				++this.pos;
-				q.ops.push(MetaOp.STACK_ENTER);
+				q.ops.push(NativeOp.STACK_ENTER);
 			} else if(c === '{') {
 				++this.pos;
-				q.ops.push(MetaOp.SCOPE_ENTER);
+				q.ops.push(NativeOp.SCOPE_ENTER);
 			} else if(this.identifierChar(c)) {
 				let name: string = this.nextIdentifier(true);
-				q.ops.push(MetaOp.SCOPE_ENTER);
+				q.ops.push(NativeOp.SCOPE_ENTER);
 				q.ops.push(new LocalReadOp(name));
-				q.ops.push(MetaOp.SCOPE_ASCEND);
+				q.ops.push(NativeOp.SCOPE_ASCEND);
 			} else {
 				throw new Error("Unexpected character " + c + " at position " + this.pos);
 			}
 		} else if(c === '[') {
 			++this.pos;
-			q.ops.push(MetaOp.STACK_DESCEND);
+			q.ops.push(NativeOp.STACK_DESCEND);
 		} else if(c === '{') {
 			++this.pos;
-			q.ops.push(MetaOp.SCOPE_DESCEND);
+			q.ops.push(NativeOp.SCOPE_DESCEND);
 		} else if(c === ']') {
 			if(++this.pos === this.src.length || this.src[this.pos] !== '.') {
-				q.ops.push(MetaOp.STACK_ASCEND);
+				q.ops.push(NativeOp.STACK_ASCEND);
 			} else {
 				++this.pos;
-				q.ops.push(MetaOp.STACK_EXIT);
+				q.ops.push(NativeOp.STACK_EXIT);
 			}
 		} else if(c === '}') {
 			if(++this.pos === this.src.length || this.src[this.pos] !== '.') {
-				q.ops.push(MetaOp.SCOPE_ASCEND);
+				q.ops.push(NativeOp.SCOPE_ASCEND);
 			} else {
 				++this.pos;
-				q.ops.push(MetaOp.SCOPE_EXIT);
+				q.ops.push(NativeOp.SCOPE_EXIT);
 			}
 		} else if(c === '"' || c === '\'') {
 			this.stepStringLiteral(q);
@@ -150,28 +140,28 @@ class Parser {
 			} while(this.pos < this.src.length && this.src[this.pos] === ',');
 			
 			while(assignments.length) {
-				let a: Assignment = assignments.pop();
+				let a: Assignment = assignments.pop() as Assignment;
 				let scopes: number = 0;
 				while(true) {
-					let name: string = a.names.shift();
+					let name: string = a.names.shift() as string;
 					
 					if(!a.names.length) {
 						q.ops.push(new AssignOp(name, a.doNow));
 						break;
 					} else {
 						q.ops.push(scopes === 0 ? new ReadOp(name) : new LocalReadOp(name));
-						q.ops.push(MetaOp.SCOPE_ENTER);
+						q.ops.push(NativeOp.SCOPE_ENTER);
 						++scopes;
 					}
 				}
 				
 				while(--scopes >= 0) {
-					q.ops.push(MetaOp.SCOPE_ASCEND);
+					q.ops.push(NativeOp.SCOPE_ASCEND);
 				}
 			}
 		} else if(this.identifierChar(c)) {
 			let name: string = this.nextIdentifier(false);
-			let op: Op|null = KeywordOp.get(name);
+			let op: Op|null = NativeOp.getByName(name);
 			if(op !== null) {
 				q.ops.push(op);
 			} else {
@@ -256,7 +246,7 @@ class Parser {
 	private stringLiteralBuilder: Array<string>|null = null;
 	private stringLiteralDelimiter: string|null = null;
 	private stepStringLiteral(q: Quote): void {
-		if(this.stringLiteralBuilder === null) {
+		if(this.stringLiteralBuilder === null || this.stringLiteralDelimiter === null) {
 			let d: string = this.src.charAt(this.pos++);
 			this.stringLiteralDelimiter = d;
 			if(this.src[this.pos] === d && this.src[this.pos+1] === d) {
@@ -277,7 +267,7 @@ class Parser {
 					
 					switch(c = this.src[++this.pos]) {
 						case '"':
-						case '\'':
+						case "'":
 						case '\\':
 							this.stringLiteralBuilder.push(c);
 							break;
@@ -321,8 +311,8 @@ class Parser {
 					break;
 				
 				case '"':
-				case '\'':
-					if(this.src.substring(this.pos-1).startsWith(this.stringLiteralDelimiter)) {
+				case "'":
+					if(this.src.substring(this.pos-1, this.pos+this.stringLiteralDelimiter.length-1) === this.stringLiteralDelimiter) {
 						this.pos += this.stringLiteralDelimiter.length - 1;
 						let s: string = this.stringLiteralBuilder.join('');
 						this.stringLiteralBuilder = null;
@@ -349,7 +339,7 @@ class Parser {
 			throw new Error("Expected identifier at position " + startPos);
 		}
 		let name: string = this.src.substring(startPos, this.pos);
-		if(throwIfKeyword && KeywordOp.get(name) !== null) {
+		if(throwIfKeyword && NativeOp.getByName(name) !== null) {
 			throw new Error("Unexpected keyword " + name + " at position " + startPos);
 		}
 		return name;

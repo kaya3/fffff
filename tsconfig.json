@@ -5,6 +5,8 @@
     "files": [
 		"main.ts",
 		"parser.ts",
+		"values.ts",
+		"ops.ts",
         "tests.ts"
     ]
 }
