@@ -217,7 +217,13 @@ var _NATIVE = {
 		v = +v;
 		if(!isFinite(v)) { return v; }
 		return (v - v % 1) || (v < 0 ? -0 : v === 0 ? v : 0);
-	})
+	}),
+	loadSlow: function(scopes: Array<{ [k: string]: any }>, name: string): any {
+		let i: number = scopes.length;
+		let v: any = null;
+		while(--i >= 0 && !(v = scopes[i][name]));
+		return v || _ERROR.nameError(name);
+	},
 };
 
 var _ERROR = {

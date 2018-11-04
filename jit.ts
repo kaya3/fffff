@@ -17,6 +17,7 @@ class JITCompiler {
 		}
 		
 		sb.push('_q0();');
+		console.log(sb.join(''));
 		return new Function('_NATIVE', '_OUT', '_ERROR', sb.join(''));
 	}
 	
@@ -266,20 +267,20 @@ class JITCompiler {
 				// TODO: allow doubles
 				this.writePop(sb, '_tmp2', 'int');
 				this.writePop(sb, '_tmp1', 'int');
-				sb.push('\t', '_stack.push({ type: "int", v: _tmp1.v & _tmp2.v) });\n');
+				sb.push('\t', '_stack.push({ type: "int", v: _tmp1.v & _tmp2.v });\n');
 				break;
 			
 			case NativeOp.BIT_OR.opcode:
 				// TODO: allow doubles
 				this.writePop(sb, '_tmp2', 'int');
 				this.writePop(sb, '_tmp1', 'int');
-				sb.push('\t', '_stack.push({ type: "int", v: _tmp1.v | _tmp2.v) });\n');
+				sb.push('\t', '_stack.push({ type: "int", v: _tmp1.v | _tmp2.v });\n');
 				break;
 			
 			case NativeOp.BIT_NEG.opcode:
 				// TODO: allow doubles
 				this.writePop(sb, '_tmp1', 'int');
-				sb.push('\t', '_stack.push({ type: "int", v: ~_tmp1.v) });\n');
+				sb.push('\t', '_stack.push({ type: "int", v: ~_tmp1.v });\n');
 				break;
 			
 			case NativeOp.BIT_XOR.opcode:
@@ -287,7 +288,7 @@ class JITCompiler {
 				this.writePop(sb, '_tmp2', 'int');
 				this.writePop(sb, '_tmp1', 'int');
 				sb.push(
-					'\t', '_stack.push({ type: "int", v: _tmp1.v ^ _tmp2.v) });\n'
+					'\t', '_stack.push({ type: "int", v: _tmp1.v ^ _tmp2.v });\n'
 				);
 				break;
 			
@@ -295,35 +296,35 @@ class JITCompiler {
 				// TODO: allow doubles
 				this.writePop(sb, '_tmp2', 'int');
 				this.writePop(sb, '_tmp1', 'int');
-				sb.push('\t', '_stack.push({ type: "boolean", v: _tmp1.v === _tmp2.v) });\n');
+				sb.push('\t', '_stack.push({ type: "boolean", v: _tmp1.v === _tmp2.v });\n');
 				break;
 			
 			case NativeOp.LESS_THAN.opcode:
 				// TODO: allow doubles
 				this.writePop(sb, '_tmp2', 'int');
 				this.writePop(sb, '_tmp1', 'int');
-				sb.push('\t', '_stack.push({ type: "boolean", v: _tmp1.v < _tmp2.v) });\n');
+				sb.push('\t', '_stack.push({ type: "boolean", v: _tmp1.v < _tmp2.v });\n');
 				break;
 			
 			case NativeOp.GREATER_THAN.opcode:
 				// TODO: allow doubles
 				this.writePop(sb, '_tmp2', 'int');
 				this.writePop(sb, '_tmp1', 'int');
-				sb.push('\t', '_stack.push({ type: "boolean", v: _tmp1.v > _tmp2.v) });\n');
+				sb.push('\t', '_stack.push({ type: "boolean", v: _tmp1.v > _tmp2.v });\n');
 				break;
 			
 			case NativeOp.LESS_THAN_OR_EQUAL.opcode:
 				// TODO: allow doubles
 				this.writePop(sb, '_tmp2', 'int');
 				this.writePop(sb, '_tmp1', 'int');
-				sb.push('\t', '_stack.push({ type: "boolean", v: _tmp1.v <= _tmp2.v) });\n');
+				sb.push('\t', '_stack.push({ type: "boolean", v: _tmp1.v <= _tmp2.v });\n');
 				break;
 			
 			case NativeOp.GREATER_THAN_OR_EQUAL.opcode:
 				// TODO: allow doubles
 				this.writePop(sb, '_tmp2', 'int');
 				this.writePop(sb, '_tmp1', 'int');
-				sb.push('\t', '_stack.push({ type: "boolean", v: _tmp1.v >= _tmp2.v) });\n');
+				sb.push('\t', '_stack.push({ type: "boolean", v: _tmp1.v >= _tmp2.v });\n');
 				break;
 			
 			default:
@@ -384,7 +385,7 @@ class JITCompiler {
 			
 			case NativeOp.LOAD_SLOW.opcode:
 				name = JSON.stringify(this.jsonCodeObject.names[constID]);
-				sb.push('\t', '_tmp1 = _NATIVE.loadSlow(_scopes, ', name, ') || _ERROR.nameError(', name, '); }\n',);
+				sb.push('\t', '_tmp1 = _NATIVE.loadSlow(_scopes, ', name, ') || _ERROR.nameError(', name, ');\n',);
 				this.writeImmediateQuote(sb, '_tmp1');
 				break;
 			

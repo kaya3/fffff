@@ -197,7 +197,14 @@ var _NATIVE = {
             return v;
         }
         return (v - v % 1) || (v < 0 ? -0 : v === 0 ? v : 0);
-    })
+    }),
+    loadSlow: function (scopes, name) {
+        var i = scopes.length;
+        var v = null;
+        while (--i >= 0 && !(v = scopes[i][name]))
+            ;
+        return v || _ERROR.nameError(name);
+    }
 };
 var _ERROR = {
     wrongType: function (actualType, expectedType) {
