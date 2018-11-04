@@ -47,7 +47,7 @@ class AssignOp {
 	}
 	
 	public repr(): string {
-		return '>' + this.name;
+		return (this.doNow ? '>!' : '>') + this.name;
 	}
 }
 
@@ -67,7 +67,8 @@ class ReadOp {
 	public constructor(public readonly name: string) {}
 	
 	public compile(constants: Constants): string {
-		return constants.addPrimitive(name, 'string') + NativeOp.LOAD_SLOW.compile(constants);
+		let c: string = constants.addPrimitive(this.name, 'string');
+		return NativeOp.LOAD_SLOW.compile(constants) + c.substring(1);
 	}
 	
 	public repr(): string {
@@ -79,7 +80,8 @@ class LocalReadOp {
 	public constructor(public readonly name: string) {}
 	
 	public compile(constants: Constants): string {
-		return constants.addPrimitive(name, 'string') + NativeOp.LOAD_FAST.compile(constants);
+		let c: string = constants.addPrimitive(this.name, 'string');
+		return NativeOp.LOAD_FAST.compile(constants) + c.substring(1);
 	}
 	
 	public repr(): string {

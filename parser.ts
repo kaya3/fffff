@@ -164,20 +164,22 @@ class Parser {
 					q.ops.push(NativeOp.SCOPE_ASCEND);
 				}
 			}
-		} else if(this.identifierChar(c)) {
-			let name: string = this.nextIdentifier(false);
+		} else {
+			let name: string;
+			if(this.identifierChar(c)) {
+				name = this.nextIdentifier(false);
+			} else if(this.opChar(c)) {
+				name = this.nextOpName();
+			} else {
+				throw new Error("Syntax error: unexpected character " + c + " at position " + this.pos);
+			}
 			let op: Op|null = NativeOp.getByName(name);
 			if(op !== null) {
 				q.ops.push(op);
 			} else {
-				// read
+				// TODO: are built-in operators allowed to be overloaded?
 				q.ops.push(new ReadOp(name));
 			}
-		} else if(this.opChar(c)) {
-			// apply op
-			q.ops.push(new ReadOp(this.nextOpName()));
-		} else {
-			throw new Error("Syntax error: unexpected character " + c + " at position " + this.pos);
 		}
 	}
 	

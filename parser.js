@@ -179,23 +179,25 @@ var Parser = /** @class */ (function () {
                 }
             }
         }
-        else if (this.identifierChar(c)) {
-            var name_3 = this.nextIdentifier(false);
+        else {
+            var name_3;
+            if (this.identifierChar(c)) {
+                name_3 = this.nextIdentifier(false);
+            }
+            else if (this.opChar(c)) {
+                name_3 = this.nextOpName();
+            }
+            else {
+                throw new Error("Syntax error: unexpected character " + c + " at position " + this.pos);
+            }
             var op = NativeOp.getByName(name_3);
             if (op !== null) {
                 q.ops.push(op);
             }
             else {
-                // read
+                // TODO: are built-in operators allowed to be overloaded?
                 q.ops.push(new ReadOp(name_3));
             }
-        }
-        else if (this.opChar(c)) {
-            // apply op
-            q.ops.push(new ReadOp(this.nextOpName()));
-        }
-        else {
-            throw new Error("Syntax error: unexpected character " + c + " at position " + this.pos);
         }
     };
     Parser.prototype.stepWhitespace = function () {

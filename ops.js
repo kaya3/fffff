@@ -41,7 +41,7 @@ var AssignOp = /** @class */ (function () {
         return (this.doNow ? NativeOp.STORE_QUOTE : NativeOp.STORE).opcode + c.substring(1);
     };
     AssignOp.prototype.repr = function () {
-        return '>' + this.name;
+        return (this.doNow ? '>!' : '>') + this.name;
     };
     return AssignOp;
 }());
@@ -62,7 +62,8 @@ var ReadOp = /** @class */ (function () {
         this.name = name;
     }
     ReadOp.prototype.compile = function (constants) {
-        return constants.addPrimitive(name, 'string') + NativeOp.LOAD_SLOW.compile(constants);
+        var c = constants.addPrimitive(this.name, 'string');
+        return NativeOp.LOAD_SLOW.compile(constants) + c.substring(1);
     };
     ReadOp.prototype.repr = function () {
         return this.name;
@@ -74,7 +75,8 @@ var LocalReadOp = /** @class */ (function () {
         this.name = name;
     }
     LocalReadOp.prototype.compile = function (constants) {
-        return constants.addPrimitive(name, 'string') + NativeOp.LOAD_FAST.compile(constants);
+        var c = constants.addPrimitive(this.name, 'string');
+        return NativeOp.LOAD_FAST.compile(constants) + c.substring(1);
     };
     LocalReadOp.prototype.repr = function () {
         return this.name;
