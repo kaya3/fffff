@@ -17,7 +17,7 @@ class JITCompiler {
 		}
 		
 		sb.push('_q0();');
-		console.log(sb.join(''));
+		//console.log(sb.join(''));
 		return new Function('_NATIVE', '_OUT', '_ERROR', sb.join(''));
 	}
 	
@@ -72,10 +72,7 @@ class JITCompiler {
 				break;
 			
 			case NativeOp.SCOPE_DESCEND.opcode:
-				sb.push(
-					'\t', '_scope = Object.create(null);\n',
-					'\t', '_scopes.push({ type: "scope", v: _scope });\n'
-				);
+				sb.push('\t', '_scopes.push(_scope = Object.create(null));\n');
 				break;
 			
 			case NativeOp.SCOPE_ASCEND.opcode:
@@ -375,7 +372,7 @@ class JITCompiler {
 			case NativeOp.STORE_QUOTE.opcode:
 				name = JSON.stringify(this.jsonCodeObject.names[constID]);
 				this.writePop(sb, '_tmp1', 'quote');
-				sb.push('\t', '_scope[', name, '] = { type: "immediate_quote", q: _tmp1 };\n');
+				sb.push('\t', '_scope[', name, '] = { type: "immediate_quote", q: _tmp1.q };\n');
 				break;
 			
 			case NativeOp.LOAD_FAST.opcode:
@@ -407,6 +404,6 @@ class JITCompiler {
 	}
 	
 	private writeImmediateQuote(sb: Array<string|number>, varName: TmpVarName): void {
-		sb.push('\t', 'if(_tmp1.type === "immediate_quote") { _tmp1.q(); } else { _stack.push(_tmp1); }\n');
+		sb.push('\t', 'if(', varName, '.type === "immediate_quote") { ', varName, '.q(); } else { _stack.push(', varName, '); }\n');
 	}
 }

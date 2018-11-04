@@ -327,7 +327,8 @@ class Interpreter {
 				if(--i >= 0) {
 					doOp = this.scopeStack[i].read(name);
 				} else {
-					doOp = NativeOp.getByName(name) || _ERROR.nameError(name);;
+					// TODO: builtins only need to be dynamically resolved if they can be overloaded
+					_ERROR.nameError(name);
 				}
 			}
 			

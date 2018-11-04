@@ -287,8 +287,8 @@ var Interpreter = /** @class */ (function () {
                     doOp = this.scopeStack[i].read(name_1);
                 }
                 else {
-                    doOp = NativeOp.getByName(name_1) || _ERROR.nameError(name_1);
-                    ;
+                    // TODO: builtins only need to be dynamically resolved if they can be overloaded
+                    _ERROR.nameError(name_1);
                 }
             }
             this.callStack.push(new OpCall(doOp));

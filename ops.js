@@ -199,11 +199,12 @@ var _NATIVE = {
         return (v - v % 1) || (v < 0 ? -0 : v === 0 ? v : 0);
     }),
     loadSlow: function (scopes, name) {
-        var i = scopes.length;
-        var v = null;
-        while (--i >= 0 && !(v = scopes[i][name]))
-            ;
-        return v || _ERROR.nameError(name);
+        for (var i = scopes.length - 1; i >= 0; --i) {
+            if (Object.prototype.hasOwnProperty.call(scopes[i], name)) {
+                return scopes[i][name];
+            }
+        }
+        _ERROR.nameError(name);
     }
 };
 var _ERROR = {

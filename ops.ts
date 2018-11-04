@@ -219,10 +219,12 @@ var _NATIVE = {
 		return (v - v % 1) || (v < 0 ? -0 : v === 0 ? v : 0);
 	}),
 	loadSlow: function(scopes: Array<{ [k: string]: any }>, name: string): any {
-		let i: number = scopes.length;
-		let v: any = null;
-		while(--i >= 0 && !(v = scopes[i][name]));
-		return v || _ERROR.nameError(name);
+		for(let i: number = scopes.length-1; i >= 0; --i) {
+			if(Object.prototype.hasOwnProperty.call(scopes[i], name)) {
+				return scopes[i][name];
+			}
+		}
+		_ERROR.nameError(name);
 	},
 };
 

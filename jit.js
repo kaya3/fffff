@@ -13,7 +13,7 @@ var JITCompiler = /** @class */ (function () {
             sb.push('};\n');
         }
         sb.push('_q0();');
-        console.log(sb.join(''));
+        //console.log(sb.join(''));
         return new Function('_NATIVE', '_OUT', '_ERROR', sb.join(''));
     };
     JITCompiler.prototype.compileByteCode = function (index, bc, sb) {
@@ -52,7 +52,7 @@ var JITCompiler = /** @class */ (function () {
                 sb.push('\t', 'if(_stacks.length === 1) { _ERROR.ascendFromGlobalStack(); }\n', '\t', '_tmp1 = _stacks.pop();\n', '\t', '_stack = _stacks[_stacks.length-1];\n', '\t', '_stack.push({ type: "stack", v: _tmp1 });\n');
                 break;
             case NativeOp.SCOPE_DESCEND.opcode:
-                sb.push('\t', '_scope = Object.create(null);\n', '\t', '_scopes.push({ type: "scope", v: _scope });\n');
+                sb.push('\t', '_scopes.push(_scope = Object.create(null));\n');
                 break;
             case NativeOp.SCOPE_ASCEND.opcode:
                 sb.push('\t', 'if(_scopes.length === 1) { _ERROR.ascendFromGlobalScope(); }\n', '\t', '_scopes.pop();\n', '\t', '_scope = _scopes[_scopes.length-1];\n');
@@ -277,7 +277,7 @@ var JITCompiler = /** @class */ (function () {
             case NativeOp.STORE_QUOTE.opcode:
                 name_1 = JSON.stringify(this.jsonCodeObject.names[constID]);
                 this.writePop(sb, '_tmp1', 'quote');
-                sb.push('\t', '_scope[', name_1, '] = { type: "immediate_quote", q: _tmp1 };\n');
+                sb.push('\t', '_scope[', name_1, '] = { type: "immediate_quote", q: _tmp1.q };\n');
                 break;
             case NativeOp.LOAD_FAST.opcode:
                 name_1 = JSON.stringify(this.jsonCodeObject.names[constID]);
@@ -304,7 +304,7 @@ var JITCompiler = /** @class */ (function () {
         sb.push('\t', 'if(', varName, '.type !== "', typeTag, '") { _ERROR.wrongType(', varName, '.type, "', typeTag, '"); }\n');
     };
     JITCompiler.prototype.writeImmediateQuote = function (sb, varName) {
-        sb.push('\t', 'if(_tmp1.type === "immediate_quote") { _tmp1.q(); } else { _stack.push(_tmp1); }\n');
+        sb.push('\t', 'if(', varName, '.type === "immediate_quote") { ', varName, '.q(); } else { _stack.push(', varName, '); }\n');
     };
     JITCompiler.opCodesWithConstants = NativeOp.CONST_INT.opcode + NativeOp.CONST_DOUBLE.opcode + NativeOp.CONST_STRING.opcode + NativeOp.CONST_QUOTE.opcode + NativeOp.STORE.opcode + NativeOp.STORE_QUOTE.opcode + NativeOp.LOAD_FAST.opcode + NativeOp.LOAD_SLOW.opcode;
     return JITCompiler;
