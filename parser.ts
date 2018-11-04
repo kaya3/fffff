@@ -56,7 +56,7 @@ class Parser {
 	private step(): void {
 		let c: string = this.src[this.pos];
 		let q: Quote = this.quotes.peek();
-		if(/\s/.test(c)) {
+		if(/\s|\n/.test(c)) {
 			this.stepWhitespace();
 		} else if(c === '#') {
 			let startPos: number = ++this.pos;
@@ -122,7 +122,7 @@ class Parser {
 			this.stepStringLiteral(q);
 		} else if(this.digitChar(c) || (c === '-' && this.pos+1 < this.src.length && this.digitChar(this.src[this.pos+1]))) {
 			q.ops.push(new PushOp(this.nextNumber()));
-		} else if(c === '>' && (this.identifierChar(c = this.src[this.pos+1]) || c === '!')) {
+		} else if(c === '>' && this.pos+1 < this.src.length && (this.identifierChar(this.src[this.pos+1]) || this.src[this.pos+1] === '!')) {
 			class Assignment {
 				readonly names: Array<string> = [];
 				doNow: boolean = false;
@@ -185,7 +185,7 @@ class Parser {
 	
 	private stepWhitespace(): void {
 		// TODO: search for next non-whitespace character after pos
-		while(++this.pos < this.src.length && /\s/.test(this.src[this.pos]));
+		while(/\s|\n/.test(this.src[this.pos]) && ++this.pos < this.src.length);
 	}
 	
 	private stepComment(): void {
@@ -346,7 +346,9 @@ class Parser {
 			throw new Error("Syntax error: expected identifier at position " + startPos);
 		}
 		let name: string = this.src.substring(startPos, this.pos);
-		if(throwIfKeyword && NativeOp.getByName(name) !== null) {
+		if(name === '') {
+			throw new Error('Parser error: empty name at position ' + startPos + " (shouldn't happen)");
+		} else if(throwIfKeyword && NativeOp.getByName(name) !== null) {
 			throw new Error("Syntax error: unexpected keyword " + name + " at position " + startPos);
 		}
 		return name;

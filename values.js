@@ -1,6 +1,6 @@
 "use strict";
 function typecheck(v, typeTag) {
-    return v.type === typeTag ? v : _ERROR.wrongType(v.type, typeTag);
+    return (v.type === typeTag || (v.type === 'js_object' && typeTag === 'scope')) ? v : _ERROR.wrongType(v.type, typeTag);
 }
 var StringValue = /** @class */ (function () {
     function StringValue(v) {
@@ -86,9 +86,6 @@ var BoolValue = /** @class */ (function () {
         this.v = v;
         this.type = 'boolean';
     }
-    BoolValue.of = function (b) {
-        return b ? BoolValue.TRUE : BoolValue.FALSE;
-    };
     BoolValue.prototype.repr = function () {
         return this.v ? 'true' : 'false';
     };
@@ -146,6 +143,9 @@ var VStack = /** @class */ (function () {
         this.v = [];
         this.isStringing = false;
     }
+    VStack.prototype.push = function (value) {
+        this.v.push(value);
+    };
     VStack.prototype.peek = function (typeTag) {
         return typecheck(this.v.peek(), typeTag);
     };
@@ -158,11 +158,14 @@ var VStack = /** @class */ (function () {
     VStack.prototype.popAny = function () {
         return this.v.pop() || _ERROR.emptyStack();
     };
-    VStack.prototype.get = function (index) {
+    VStack.prototype.getValue = function (index) {
         if (index < 0 || index >= this.v.length) {
             _ERROR.indexOutOfBounds(index, this.v.length);
         }
         return this.v[index];
+    };
+    VStack.prototype.length = function () {
+        return this.v.length;
     };
     VStack.prototype.repr = function () {
         if (this.isStringing) {
@@ -192,7 +195,10 @@ var Scope = /** @class */ (function () {
         this.v = Object.create(null);
         this.isStringing = false;
     }
-    Scope.prototype.read = function (name) {
+    Scope.prototype.store = function (name, op) {
+        this.v[name] = op;
+    };
+    Scope.prototype.load = function (name) {
         if (Object.prototype.hasOwnProperty.call(this.v, name)) {
             return this.v[name];
         }
@@ -202,17 +208,14 @@ var Scope = /** @class */ (function () {
     };
     Scope.prototype.doAssignment = function (op, val) {
         if (op.doNow) {
-            this.assignOp(op.name, val);
+            if (!(val instanceof Quote)) {
+                throw new Error('Illegal state: store immediate must be quote');
+            }
+            this.store(op.name, new QuotedOp(val));
         }
         else {
-            this.assignValue(op.name, val);
+            this.store(op.name, new PushOp(val));
         }
-    };
-    Scope.prototype.assignOp = function (name, q) {
-        this.v[name] = new QuotedOp(q);
-    };
-    Scope.prototype.assignValue = function (name, val) {
-        this.v[name] = new PushOp(val);
     };
     Scope.prototype.repr = function () {
         if (this.isStringing) {

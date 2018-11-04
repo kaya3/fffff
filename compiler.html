@@ -10,15 +10,47 @@
 <script src="jit.js"></script>
 <style type="text/css">
 #src { width: 100%; height: 50vh; resize: none; }
-pre { white-space: pre-wrap; }
+pre, textarea { white-space: pre-wrap; tab-size: 4; }
 </style>
 </head>
 <body>
+<h1 id="main_heading">fffff Compiler</h1>
 <textarea id="src" spellcheck="false">
-(1 2 3) 6 repeat
+({>a a a})>!dup
+({>a,b b a})>!swap
+({>a,b (a) a b &lt; if (dup 1 +) b a - 1 - repeat}) &gt;!range
+
+0 10 range
+(print) 10 repeat '' println
+
+({
+    >if_true,if_false,condition
+    if_true condition if
+    if_false condition not if
+}) >!if_else
+
+({
+    >n
+    
+    (1)
+    (n 2 - fib n 1 - fib +)
+    n 1 &lt;= if_else
+}) &gt;!fib
+
+[0 10 range].
+[]. >outputs
+(
+	pop
+	fib
+	outputs swap push del
+) 10 repeat
+
+outputs println
 </textarea>
-<button id="compile">Compile</button>
+<button id="compile">Compile &amp; run</button>
 <pre id="error_message"></pre>
+<h2>Printed output</h2>
+<pre id="printed_output"></pre>
 <h2>Compiled output</h2>
 <pre id="compiled_output"></pre>
 <h2>Decompiled output</h2>
@@ -31,11 +63,16 @@ pre { white-space: pre-wrap; }
 	var compiled_output = document.getElementById('compiled_output');
 	var decompiled_output = document.getElementById('decompiled_output');
 	var js_output = document.getElementById('js_output');
+	var printed_output = document.getElementById('printed_output');
+	var _OUT = function(s) {
+		printed_output.appendChild(document.createTextNode(s));
+	};
 	function compile() {
 		error_message.innerText = '';
 		compiled_output.innerText = '';
 		decompiled_output.innerText = '';
 		js_output.innerText = '';
+		printed_output.innerText = '';
 		try {
 			var q = Parser.parse(src.value);
 			var co = new CodeObject(q);
@@ -44,7 +81,7 @@ pre { white-space: pre-wrap; }
 			decompiled_output.innerText = decompile(j);
 			var f = new JITCompiler(j).compileAll();
 			js_output.innerText = f.toString();
-			f(_NATIVE, console.log, _ERROR);
+			f(_NATIVE, _OUT, _ERROR);
 		} catch(e) {
 			error_message.innerText = e.message;
 			throw e;

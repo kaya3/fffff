@@ -55,7 +55,7 @@ var Parser = /** @class */ (function () {
     Parser.prototype.step = function () {
         var c = this.src[this.pos];
         var q = this.quotes.peek();
-        if (/\s/.test(c)) {
+        if (/\s|\n/.test(c)) {
             this.stepWhitespace();
         }
         else if (c === '#') {
@@ -138,7 +138,7 @@ var Parser = /** @class */ (function () {
         else if (this.digitChar(c) || (c === '-' && this.pos + 1 < this.src.length && this.digitChar(this.src[this.pos + 1]))) {
             q.ops.push(new PushOp(this.nextNumber()));
         }
-        else if (c === '>' && (this.identifierChar(c = this.src[this.pos + 1]) || c === '!')) {
+        else if (c === '>' && this.pos + 1 < this.src.length && (this.identifierChar(this.src[this.pos + 1]) || this.src[this.pos + 1] === '!')) {
             var Assignment = /** @class */ (function () {
                 function Assignment() {
                     this.names = [];
@@ -202,7 +202,7 @@ var Parser = /** @class */ (function () {
     };
     Parser.prototype.stepWhitespace = function () {
         // TODO: search for next non-whitespace character after pos
-        while (++this.pos < this.src.length && /\s/.test(this.src[this.pos]))
+        while (/\s|\n/.test(this.src[this.pos]) && ++this.pos < this.src.length)
             ;
     };
     Parser.prototype.stepComment = function () {
@@ -351,7 +351,10 @@ var Parser = /** @class */ (function () {
             throw new Error("Syntax error: expected identifier at position " + startPos);
         }
         var name = this.src.substring(startPos, this.pos);
-        if (throwIfKeyword && NativeOp.getByName(name) !== null) {
+        if (name === '') {
+            throw new Error('Parser error: empty name at position ' + startPos + " (shouldn't happen)");
+        }
+        else if (throwIfKeyword && NativeOp.getByName(name) !== null) {
             throw new Error("Syntax error: unexpected keyword " + name + " at position " + startPos);
         }
         return name;

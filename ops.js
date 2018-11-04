@@ -164,6 +164,24 @@ var NativeOp = /** @class */ (function () {
     return NativeOp;
 }());
 var _NATIVE = {
+    stack: function () {
+        return new VStack();
+    },
+    scope: function () {
+        return new Scope();
+    },
+    boolean: function (b) {
+        return b ? BoolValue.TRUE : BoolValue.FALSE;
+    },
+    int: function (i) {
+        return new IntValue(i);
+    },
+    double: function (d) {
+        return new DoubleValue(d);
+    },
+    string: function (s) {
+        return new StringValue(s);
+    },
     imul: (Math.imul || function (a, b) {
         // Math.imul polyfill
         var aHi = (a >>> 16) & 0xffff;
@@ -200,11 +218,23 @@ var _NATIVE = {
     }),
     loadSlow: function (scopes, name) {
         for (var i = scopes.length - 1; i >= 0; --i) {
-            if (Object.prototype.hasOwnProperty.call(scopes[i], name)) {
-                return scopes[i][name];
+            var v = scopes[i].load(name);
+            if (v) {
+                return v;
             }
         }
         _ERROR.nameError(name);
+    },
+    wrapJSFunction: function (f, stacks) {
+        return {
+            type: 'function',
+            q: function () {
+                var args = stacks[stacks.length - 1].pop('stack');
+                var unwrappedArgs = f.wrapper.unwrap(args);
+                var result = f.q.call(f.wrapper.v, unwrappedArgs);
+                stacks[stacks.length - 1].push(f.wrapper.wrap(result));
+            }
+        };
     }
 };
 var _ERROR = {
@@ -212,7 +242,7 @@ var _ERROR = {
         throw new Error('Type error: expected ' + expectedType + ', was ' + actualType);
     },
     printNotSupported: function (actualType) {
-        throw new Error('Type error: expected string, int or double; was ' + actualType);
+        throw new Error('Type error: expected string, int, double, boolean or stack; was ' + actualType);
     },
     emptyStack: function () {
         throw new Error('Illegal state: pop from empty stack');

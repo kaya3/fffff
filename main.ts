@@ -113,11 +113,11 @@ class Interpreter {
 		if(op instanceof NativeOp) {
 			switch(op.name) {
 				case 'true':
-					vs.v.push(BoolValue.TRUE);
+					vs.push(BoolValue.TRUE);
 					break;
 				
 				case 'false':
-					vs.v.push(BoolValue.FALSE);
+					vs.push(BoolValue.FALSE);
 					break;
 				
 				case 'import':
@@ -142,7 +142,7 @@ class Interpreter {
 				case '].':
 					if(this.valueStacks.length === 1) { _ERROR.ascendFromGlobalStack(); }
 					this.valueStacks.pop();
-					this.valueStacks.peek().v.push(vs);
+					this.valueStacks.peek().push(vs);
 					break;
 				
 				case '{':
@@ -160,7 +160,7 @@ class Interpreter {
 				
 				case '}.':
 					if(this.scopeStack.length === 1) { _ERROR.ascendFromGlobalScope(); }
-					vs.v.push(this.scopeStack.pop() as Scope);
+					vs.push(this.scopeStack.pop() as Scope);
 					break;
 				
 				case '!':
@@ -188,38 +188,38 @@ class Interpreter {
 				
 				case 'push':
 					let v: Value = vs.popAny();
-					vs.peek('stack').v.push(v);
+					vs.peek('stack').push(v);
 					break;
 				
 				case 'pop':
 					let s: VStack = vs.peek('stack');
-					vs.v.push(s.popAny());
+					vs.push(s.popAny());
 					break;
 				
 				case 'len':
 					s = vs.pop('stack');
-					vs.v.push(new IntValue(s.v.length));
+					vs.push(new IntValue(s.length()));
 					break;
 				
 				case 'get':
 					let i: number = this.popInt();
-					vs.v.push(vs.get(i));
+					vs.push(vs.getValue(i));
 					break;
 				
 				case 'and':
 					let b1: boolean = this.popBool();
 					let b2: boolean = this.popBool();
-					vs.v.push(b1 && b2 ? BoolValue.TRUE : BoolValue.FALSE);
+					vs.push(b1 && b2 ? BoolValue.TRUE : BoolValue.FALSE);
 					break;
 				
 				case 'or':
 					b1 = this.popBool();
 					b2 = this.popBool();
-					vs.v.push(b1 || b2 ? BoolValue.TRUE : BoolValue.FALSE);
+					vs.push(b1 || b2 ? BoolValue.TRUE : BoolValue.FALSE);
 					break;
 				
 				case 'not':
-					vs.v.push(this.popBool() ? BoolValue.FALSE : BoolValue.TRUE);
+					vs.push(this.popBool() ? BoolValue.FALSE : BoolValue.TRUE);
 					break;
 				
 				case 'if':
@@ -237,75 +237,75 @@ class Interpreter {
 					break;
 				
 				case 'this':
-					vs.v.push(this.scopeStack.peek());
+					vs.push(this.scopeStack.peek());
 					break;
 				
 				case 'stack':
-					vs.v.push(vs);
+					vs.push(vs);
 					break;
 				
 				case '+':
-					vs.v.push(new IntValue(this.popInt() + this.popInt()));
+					vs.push(new IntValue(this.popInt() + this.popInt()));
 					break;
 				
 				case '-':
-					vs.v.push(new IntValue((-this.popInt()) + this.popInt()));
+					vs.push(new IntValue((-this.popInt()) + this.popInt()));
 					break;
 				
 				case '*':
-					vs.v.push(new IntValue(_NATIVE.imul(this.popInt(), this.popInt())));
+					vs.push(new IntValue(_NATIVE.imul(this.popInt(), this.popInt())));
 					break;
 				
 				case '**':
 					let i2: number = this.popInt();
 					let i1: number = this.popInt();
-					vs.v.push(new IntValue(_NATIVE.ipow(i1, i2)));
+					vs.push(new IntValue(_NATIVE.ipow(i1, i2)));
 					break;
 				
 				case '/':
 					i2 = this.popInt();
 					i1 = this.popInt();
-					vs.v.push(new IntValue(_NATIVE.idiv(i1, i2)));
+					vs.push(new IntValue(_NATIVE.idiv(i1, i2)));
 					break;
 				
 				case '%':
 					i2 = this.popInt();
 					i1 = this.popInt();
-					vs.v.push(new IntValue(_NATIVE.imod(i1, i2)));
+					vs.push(new IntValue(_NATIVE.imod(i1, i2)));
 					break;
 				
 				case '&':
-					vs.v.push(new IntValue(this.popInt() & this.popInt()));
+					vs.push(new IntValue(this.popInt() & this.popInt()));
 					break;
 				
 				case '|':
-					vs.v.push(new IntValue(this.popInt() | this.popInt()));
+					vs.push(new IntValue(this.popInt() | this.popInt()));
 					break;
 				
 				case '~':
-					vs.v.push(new IntValue(~this.popInt()));
+					vs.push(new IntValue(~this.popInt()));
 					break;
 				
 				// TODO: allow comparisons of other types
 				case '=':
-					vs.v.push(BoolValue.of(this.popInt() === this.popInt()));
+					vs.push(_NATIVE.boolean(this.popInt() === this.popInt()));
 					break;
 				
 				// operands popped in reverse order
 				case '<':
-					vs.v.push(BoolValue.of(this.popInt() > this.popInt()));
+					vs.push(_NATIVE.boolean(this.popInt() > this.popInt()));
 					break;
 				
 				case '>':
-					vs.v.push(BoolValue.of(this.popInt() < this.popInt()));
+					vs.push(_NATIVE.boolean(this.popInt() < this.popInt()));
 					break;
 				
 				case '<=':
-					vs.v.push(BoolValue.of(this.popInt() >= this.popInt()));
+					vs.push(_NATIVE.boolean(this.popInt() >= this.popInt()));
 					break;
 				
 				case '>=':
-					vs.v.push(BoolValue.of(this.popInt() <= this.popInt()));
+					vs.push(_NATIVE.boolean(this.popInt() <= this.popInt()));
 					break;
 				
 				default:
@@ -315,7 +315,7 @@ class Interpreter {
 			this.callStack.push(new QuoteCall(op.q));
 		} else if(op instanceof PushOp) {
 			// TODO: check read-only status of imported stacks
-			vs.v.push(op.v);
+			vs.push(op.v);
 		} else if(op instanceof AssignOp) {
 			// TODO: check read-only status of imported scopes
 			this.scopeStack.peek().doAssignment(op, vs.popAny());
@@ -325,7 +325,7 @@ class Interpreter {
 			let i: number = this.scopeStack.length;
 			while(doOp === null) {
 				if(--i >= 0) {
-					doOp = this.scopeStack[i].read(name);
+					doOp = this.scopeStack[i].load(name);
 				} else {
 					// TODO: builtins only need to be dynamically resolved if they can be overloaded
 					_ERROR.nameError(name);
@@ -335,7 +335,7 @@ class Interpreter {
 			this.callStack.push(new OpCall(doOp));
 		} else if(op instanceof LocalReadOp) {
 			let name: string = op.name;
-			let doOp: Op = this.scopeStack.peek().read(name) || _ERROR.nameError(name);;
+			let doOp: Op = this.scopeStack.peek().load(name) || _ERROR.nameError(name);;
 			this.callStack.push(new OpCall(doOp));
 		} else if(op instanceof CommentOp) {
 			// do nothing

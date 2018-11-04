@@ -99,10 +99,10 @@ var Interpreter = /** @class */ (function () {
         if (op instanceof NativeOp) {
             switch (op.name) {
                 case 'true':
-                    vs.v.push(BoolValue.TRUE);
+                    vs.push(BoolValue.TRUE);
                     break;
                 case 'false':
-                    vs.v.push(BoolValue.FALSE);
+                    vs.push(BoolValue.FALSE);
                     break;
                 case 'import':
                 case 'import_as':
@@ -126,7 +126,7 @@ var Interpreter = /** @class */ (function () {
                         _ERROR.ascendFromGlobalStack();
                     }
                     this.valueStacks.pop();
-                    this.valueStacks.peek().v.push(vs);
+                    this.valueStacks.peek().push(vs);
                     break;
                 case '{':
                     this.scopeStack.push(new Scope());
@@ -144,7 +144,7 @@ var Interpreter = /** @class */ (function () {
                     if (this.scopeStack.length === 1) {
                         _ERROR.ascendFromGlobalScope();
                     }
-                    vs.v.push(this.scopeStack.pop());
+                    vs.push(this.scopeStack.pop());
                     break;
                 case '!':
                     var q = vs.pop('quote');
@@ -168,32 +168,32 @@ var Interpreter = /** @class */ (function () {
                     break;
                 case 'push':
                     var v = vs.popAny();
-                    vs.peek('stack').v.push(v);
+                    vs.peek('stack').push(v);
                     break;
                 case 'pop':
                     var s = vs.peek('stack');
-                    vs.v.push(s.popAny());
+                    vs.push(s.popAny());
                     break;
                 case 'len':
                     s = vs.pop('stack');
-                    vs.v.push(new IntValue(s.v.length));
+                    vs.push(new IntValue(s.length()));
                     break;
                 case 'get':
                     var i = this.popInt();
-                    vs.v.push(vs.get(i));
+                    vs.push(vs.getValue(i));
                     break;
                 case 'and':
                     var b1 = this.popBool();
                     var b2 = this.popBool();
-                    vs.v.push(b1 && b2 ? BoolValue.TRUE : BoolValue.FALSE);
+                    vs.push(b1 && b2 ? BoolValue.TRUE : BoolValue.FALSE);
                     break;
                 case 'or':
                     b1 = this.popBool();
                     b2 = this.popBool();
-                    vs.v.push(b1 || b2 ? BoolValue.TRUE : BoolValue.FALSE);
+                    vs.push(b1 || b2 ? BoolValue.TRUE : BoolValue.FALSE);
                     break;
                 case 'not':
-                    vs.v.push(this.popBool() ? BoolValue.FALSE : BoolValue.TRUE);
+                    vs.push(this.popBool() ? BoolValue.FALSE : BoolValue.TRUE);
                     break;
                 case 'if':
                     b1 = this.popBool();
@@ -208,60 +208,60 @@ var Interpreter = /** @class */ (function () {
                     this.callStack.push(new RepeatCall(q, n));
                     break;
                 case 'this':
-                    vs.v.push(this.scopeStack.peek());
+                    vs.push(this.scopeStack.peek());
                     break;
                 case 'stack':
-                    vs.v.push(vs);
+                    vs.push(vs);
                     break;
                 case '+':
-                    vs.v.push(new IntValue(this.popInt() + this.popInt()));
+                    vs.push(new IntValue(this.popInt() + this.popInt()));
                     break;
                 case '-':
-                    vs.v.push(new IntValue((-this.popInt()) + this.popInt()));
+                    vs.push(new IntValue((-this.popInt()) + this.popInt()));
                     break;
                 case '*':
-                    vs.v.push(new IntValue(_NATIVE.imul(this.popInt(), this.popInt())));
+                    vs.push(new IntValue(_NATIVE.imul(this.popInt(), this.popInt())));
                     break;
                 case '**':
                     var i2 = this.popInt();
                     var i1 = this.popInt();
-                    vs.v.push(new IntValue(_NATIVE.ipow(i1, i2)));
+                    vs.push(new IntValue(_NATIVE.ipow(i1, i2)));
                     break;
                 case '/':
                     i2 = this.popInt();
                     i1 = this.popInt();
-                    vs.v.push(new IntValue(_NATIVE.idiv(i1, i2)));
+                    vs.push(new IntValue(_NATIVE.idiv(i1, i2)));
                     break;
                 case '%':
                     i2 = this.popInt();
                     i1 = this.popInt();
-                    vs.v.push(new IntValue(_NATIVE.imod(i1, i2)));
+                    vs.push(new IntValue(_NATIVE.imod(i1, i2)));
                     break;
                 case '&':
-                    vs.v.push(new IntValue(this.popInt() & this.popInt()));
+                    vs.push(new IntValue(this.popInt() & this.popInt()));
                     break;
                 case '|':
-                    vs.v.push(new IntValue(this.popInt() | this.popInt()));
+                    vs.push(new IntValue(this.popInt() | this.popInt()));
                     break;
                 case '~':
-                    vs.v.push(new IntValue(~this.popInt()));
+                    vs.push(new IntValue(~this.popInt()));
                     break;
                 // TODO: allow comparisons of other types
                 case '=':
-                    vs.v.push(BoolValue.of(this.popInt() === this.popInt()));
+                    vs.push(_NATIVE.boolean(this.popInt() === this.popInt()));
                     break;
                 // operands popped in reverse order
                 case '<':
-                    vs.v.push(BoolValue.of(this.popInt() > this.popInt()));
+                    vs.push(_NATIVE.boolean(this.popInt() > this.popInt()));
                     break;
                 case '>':
-                    vs.v.push(BoolValue.of(this.popInt() < this.popInt()));
+                    vs.push(_NATIVE.boolean(this.popInt() < this.popInt()));
                     break;
                 case '<=':
-                    vs.v.push(BoolValue.of(this.popInt() >= this.popInt()));
+                    vs.push(_NATIVE.boolean(this.popInt() >= this.popInt()));
                     break;
                 case '>=':
-                    vs.v.push(BoolValue.of(this.popInt() <= this.popInt()));
+                    vs.push(_NATIVE.boolean(this.popInt() <= this.popInt()));
                     break;
                 default:
                     throw new Error('Illegal state: unknown operator ' + op);
@@ -272,7 +272,7 @@ var Interpreter = /** @class */ (function () {
         }
         else if (op instanceof PushOp) {
             // TODO: check read-only status of imported stacks
-            vs.v.push(op.v);
+            vs.push(op.v);
         }
         else if (op instanceof AssignOp) {
             // TODO: check read-only status of imported scopes
@@ -284,7 +284,7 @@ var Interpreter = /** @class */ (function () {
             var i = this.scopeStack.length;
             while (doOp === null) {
                 if (--i >= 0) {
-                    doOp = this.scopeStack[i].read(name_1);
+                    doOp = this.scopeStack[i].load(name_1);
                 }
                 else {
                     // TODO: builtins only need to be dynamically resolved if they can be overloaded
@@ -295,7 +295,7 @@ var Interpreter = /** @class */ (function () {
         }
         else if (op instanceof LocalReadOp) {
             var name_2 = op.name;
-            var doOp = this.scopeStack.peek().read(name_2) || _ERROR.nameError(name_2);
+            var doOp = this.scopeStack.peek().load(name_2) || _ERROR.nameError(name_2);
             ;
             this.callStack.push(new OpCall(doOp));
         }

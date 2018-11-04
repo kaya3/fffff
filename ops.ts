@@ -186,6 +186,24 @@ class NativeOp {
 }
 
 var _NATIVE = {
+	stack: function(): VStack {
+		return new VStack();
+	},
+	scope: function(): Scope {
+		return new Scope();
+	},
+	boolean: function(b: boolean): BoolValue {
+		return b ? BoolValue.TRUE : BoolValue.FALSE;
+	},
+	int: function(i: number): IntValue {
+		return new IntValue(i);
+	},
+	double: function(d: number): DoubleValue {
+		return new DoubleValue(d);
+	},
+	string: function(s: string): StringValue {
+		return new StringValue(s);
+	},
 	imul: ((Math as any).imul || function(a: number, b: number): number {
 		// Math.imul polyfill
 		var aHi = (a >>> 16) & 0xffff;
@@ -218,14 +236,24 @@ var _NATIVE = {
 		if(!isFinite(v)) { return v; }
 		return (v - v % 1) || (v < 0 ? -0 : v === 0 ? v : 0);
 	}),
-	loadSlow: function(scopes: Array<{ [k: string]: any }>, name: string): any {
+	loadSlow: function(scopes: Array<Scope>, name: string): any {
 		for(let i: number = scopes.length-1; i >= 0; --i) {
-			if(Object.prototype.hasOwnProperty.call(scopes[i], name)) {
-				return scopes[i][name];
-			}
+			let v: any = scopes[i].load(name);
+			if(v) { return v; }
 		}
 		_ERROR.nameError(name);
 	},
+	wrapJSFunction: function(f: { type: 'js_function', q: any, wrapper: JSObjectWrapper }, stacks: Array<VStack>): { type: 'function', q: any } {
+		return {
+			type: 'function',
+			q: function() {
+				let args: VStack = stacks[stacks.length-1].pop('stack');
+				let unwrappedArgs: any = f.wrapper.unwrap(args);
+				let result: any = f.q.call(f.wrapper.v, unwrappedArgs);
+				stacks[stacks.length-1].push(f.wrapper.wrap(result) as Value);
+			}
+		};
+	}
 };
 
 var _ERROR = {
@@ -233,7 +261,7 @@ var _ERROR = {
 		throw new Error('Type error: expected ' + expectedType + ', was ' + actualType);
 	},
 	printNotSupported: function(actualType: string): never {
-		throw new Error('Type error: expected string, int or double; was ' + actualType);
+		throw new Error('Type error: expected string, int, double, boolean or stack; was ' + actualType);
 	},
 	emptyStack: function(): never {
 		throw new Error('Illegal state: pop from empty stack');

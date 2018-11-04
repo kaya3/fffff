@@ -19,12 +19,11 @@ type ValueTypeTags = {
 };
 
 function typecheck<T extends Value['type']>(v: Value, typeTag: T): ValueTypeTags[T] {
-	return v.type === typeTag ? v : _ERROR.wrongType(v.type, typeTag);
+	return (v.type === typeTag || ((v.type as string) === 'js_object' && typeTag === 'scope')) ? v : _ERROR.wrongType(v.type, typeTag);
 }
 
-
 class StringValue {
-	public type: 'string' = 'string';
+	public readonly type: 'string' = 'string';
 	
 	public constructor(public readonly v: string) {}
 	
@@ -93,7 +92,7 @@ class StringValue {
 }
 
 class IntValue {
-	public type: 'int' = 'int';
+	public readonly type: 'int' = 'int';
 	
 	public readonly v: number;
 	public constructor(v: number) { this.v = v|0; }
@@ -108,14 +107,10 @@ class IntValue {
 }
 
 class BoolValue {
-	public type: 'boolean' = 'boolean';
+	public readonly type: 'boolean' = 'boolean';
 	
 	public static readonly TRUE: BoolValue = new BoolValue(true);
 	public static readonly FALSE: BoolValue = new BoolValue(false);
-	
-	public static of(b: boolean): BoolValue {
-		return b ? BoolValue.TRUE : BoolValue.FALSE;
-	}
 	
 	private constructor(public readonly v: boolean) {}
 	
@@ -129,7 +124,7 @@ class BoolValue {
 }
 
 class DoubleValue {
-	public type: 'double' = 'double';
+	public readonly type: 'double' = 'double';
 	
 	public constructor(readonly v: number) {}
 	
@@ -143,7 +138,7 @@ class DoubleValue {
 }
 
 class Quote {
-	public type: 'quote' = 'quote';
+	public readonly type: 'quote' = 'quote';
 	
 	readonly ops: Array<Op> = [];
 	
@@ -173,9 +168,13 @@ class Quote {
 }
 
 class VStack {
-	public type: 'stack' = 'stack';
+	public readonly type: 'stack' = 'stack';
 	
 	readonly v: Array<Value> = [];
+	
+	public push(value: Value): void {
+		this.v.push(value);
+	}
 	
 	public peek<T extends Value['type']>(typeTag: T): ValueTypeTags[T] {
 		return typecheck(this.v.peek(), typeTag);
@@ -193,11 +192,15 @@ class VStack {
 		return this.v.pop() as Value || _ERROR.emptyStack();
 	}
 	
-	public get(index: number): Value {
+	public getValue(index: number): Value {
 		if(index < 0 || index >= this.v.length) {
 			_ERROR.indexOutOfBounds(index, this.v.length);
 		}
 		return this.v[index];
+	}
+	
+	public length(): number {
+		return this.v.length;
 	}
 	
 	private isStringing: boolean = false;
@@ -226,11 +229,15 @@ class VStack {
 }
 
 class Scope {
-	public type: 'scope' = 'scope';
+	public readonly type: 'scope' = 'scope';
 	
 	private readonly v: { [k: string]: PushOp|QuotedOp } = Object.create(null);
 	
-	public read(name: string): Op|null {
+	public store(name: string, op: PushOp|QuotedOp): void {
+		this.v[name] = op;
+	}
+	
+	public load(name: string): PushOp|QuotedOp|null {
 		if(Object.prototype.hasOwnProperty.call(this.v, name)) {
 			return this.v[name];
 		} else {
@@ -240,21 +247,14 @@ class Scope {
 	
 	public doAssignment(op: AssignOp, val: Value): void {
 		if(op.doNow) {
-			this.assignOp(op.name, val as Quote);
+			if(!(val instanceof Quote)) { throw new Error('Illegal state: store immediate must be quote'); }
+			this.store(op.name, new QuotedOp(val));
 		} else {
-			this.assignValue(op.name, val);
+			this.store(op.name, new PushOp(val));
 		}
 	}
 	
-	public assignOp(name: string, q: Quote): void {
-		this.v[name] = new QuotedOp(q);
-	}
-	
-	public assignValue(name: string, val: Value): void {
-		this.v[name] = new PushOp(val);
-	}
-	
-	private isStringing: boolean = false;
+	isStringing: boolean = false;
 	public repr(): string {
 		if(this.isStringing) {
 			return '{...}.';
