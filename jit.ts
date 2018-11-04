@@ -7,7 +7,7 @@ class JITCompiler {
 	
 	public compileAll(): Function {
 		let sb: Array<string|number> = [
-			'var _stack = [], _this = Object.create(null), _stacks = [_stack], _scopes = [_this], _tmp1, _tmp2, _tmp3;\n'
+			'var _stack = [], _scope = Object.create(null), _stacks = [_stack], _scopes = [_scope], _tmp1, _tmp2, _tmp3;\n'
 		];
 		
 		for(let i: number = 0; i < this.jsonCodeObject.bytecode.length; ++i) {

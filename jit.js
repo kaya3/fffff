@@ -5,7 +5,7 @@ var JITCompiler = /** @class */ (function () {
     }
     JITCompiler.prototype.compileAll = function () {
         var sb = [
-            'var _stack = [], _this = Object.create(null), _stacks = [_stack], _scopes = [_this], _tmp1, _tmp2, _tmp3;\n'
+            'var _stack = [], _scope = Object.create(null), _stacks = [_stack], _scopes = [_scope], _tmp1, _tmp2, _tmp3;\n'
         ];
         for (var i = 0; i < this.jsonCodeObject.bytecode.length; ++i) {
             sb.push('var _q', i, ' = function() {\n');
