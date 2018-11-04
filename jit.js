@@ -276,7 +276,8 @@ var JITCompiler = /** @class */ (function () {
                 break;
             case NativeOp.STORE_QUOTE.opcode:
                 name_1 = JSON.stringify(this.jsonCodeObject.names[constID]);
-                sb.push('\t', '_scope[', name_1, '] = { type: "immediate_quote", q: _stack.pop() || _ERROR.emptyStack() };\n');
+                this.writePop(sb, '_tmp1', 'quote');
+                sb.push('\t', '_scope[', name_1, '] = { type: "immediate_quote", q: _tmp1 };\n');
                 break;
             case NativeOp.LOAD_FAST.opcode:
                 name_1 = JSON.stringify(this.jsonCodeObject.names[constID]);
