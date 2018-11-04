@@ -16,21 +16,29 @@ pre, textarea { white-space: pre-wrap; tab-size: 4; }
 <body>
 <h1 id="main_heading">fffff Compiler</h1>
 <textarea id="src" spellcheck="false">
-({>a a a})>!dup
-({>a,b b a})>!swap
+({>a a a}) &gt;!dup
+({>a,b b a}) &gt;!swap
 ({>a,b (a) a b &lt; if (dup 1 +) b a - 1 - repeat}) &gt;!range
 
+({
+    dup len &gt;n
+    []. &gt;outputs
+    (pop outputs swap push del) n repeat
+    del outputs
+}) &gt;!reverse
+
 0 10 range
-(print) 10 repeat '' println
+(print) 10 repeat
+'' println
 
 ({
-    >if_true,if_false,condition
+    &gt;if_true,if_false,condition
     if_true condition if
     if_false condition not if
-}) >!if_else
+}) &gt;!if_else
 
 ({
-    >n
+    &gt;n
     
     (1)
     (n 2 - fib n 1 - fib +)
@@ -38,7 +46,7 @@ pre, textarea { white-space: pre-wrap; tab-size: 4; }
 }) &gt;!fib
 
 [0 10 range].
-[]. >outputs
+[]. &gt;outputs
 (
 	pop
 	fib

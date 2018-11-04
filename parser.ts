@@ -272,7 +272,8 @@ class Parser {
 						throw new Error("Syntax error: unexpected end of source: expected escape sequence in String literal");
 					}
 					
-					switch(c = this.src[++this.pos]) {
+					c = this.src[this.pos++];
+					switch(c) {
 						case '"':
 						case "'":
 						case '\\':
@@ -327,6 +328,7 @@ class Parser {
 						q.ops.push(new PushOp(new StringValue(s)));
 						return;
 					}
+					// intentional fall-through
 				default:
 					this.stringLiteralBuilder.push(c);
 			}
