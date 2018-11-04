@@ -30,7 +30,8 @@ class ByteCode {
 
 type JSONCodeObject = {
 	bytecode: Array<string>,
-	constants: Array<string|number>
+	constants: Array<string|number>,
+	names: Array<string>
 };
 
 class CodeObject {
@@ -39,6 +40,7 @@ class CodeObject {
 	}
 	
 	private nextBCID: number = 0;
+	public readonly names: Array<string> = [];
 	public readonly primitives: Array<ConstantPrimitive> = [];
 	public readonly byteCodes: Array<ByteCode> = [];
 	
@@ -61,12 +63,31 @@ class CodeObject {
 		return p.constRef;
 	}
 	
+	public addName(name: string): number {
+		let i: number = this.names.indexOf(name);
+		if(i === -1) {
+			i = this.names.length;
+			this.names.push(name);
+		}
+		return i;
+	}
+	
 	public toJSON(): JSONCodeObject {
 		return {
 			bytecode: this.byteCodes.map(bc => bc.compiled),
-			constants: this.primitives.map(p => p.v)
+			constants: this.primitives.map(p => p.v),
+			names: this.names
 		};
 	}
+}
+
+function extractID(index: number, bc: string, startPos: number): string {
+	let pos: number = startPos;
+	while(/[0-9]/.test(bc[pos]) && ++pos < bc.length);
+	if(startPos === pos) {
+		throw new Error('Bytecode error: expected numerical index at index ' + index + ', position ' + pos);
+	}
+	return bc.substring(startPos, pos);
 }
 
 function decompile(jsonCodeObject: JSONCodeObject, index: number = 0): Quote {
@@ -79,52 +100,46 @@ function decompile(jsonCodeObject: JSONCodeObject, index: number = 0): Quote {
 		if(op === null) {
 			throw new Error('Bytecode error: illegal opcode `' + c + '` at index ' + index + ', position ' + (pos-1));
 		} else if(op.name === null) {
-			let startPos = pos;
-			while(/[0-9]/.test(bc[pos]) && ++pos < bc.length);
-			if(startPos === pos) {
-				throw new Error('Bytecode error: expected numerical index at index ' + index + ', position ' + pos);
-			}
-			let constID: number = parseInt(bc.substring(startPos, pos));
+			let constIDstr: string = extractID(index, bc, pos);
+			pos += constIDstr.length;
+			let constID: number = parseInt(constIDstr);
 			if(c === NativeOp.CONST_QUOTE.opcode) {
 				if(constID < index) {
 					throw new Error('Bytecode error: backward reference in bytecode array');
 				}
 				op = new PushOp(decompile(jsonCodeObject, constID));
-			} else {
+			} else if(c === NativeOp.CONST_INT.opcode) {
 				let v: string|number = jsonCodeObject.constants[constID];
-				var reqString = function(): string {
-					if(typeof v !== 'string') {
-						throw new Error('Bytecode error: expected string constant at index ' + index + ', id ' + constID);
-					}
-					return v;
+				if(typeof v !== 'number' || v !== (v|0)) {
+					throw new Error('Bytecode error: expected int constant at index ' + index + ', id ' + constID);
 				}
+				op = new PushOp(new IntValue(v));
+			} else if(c === NativeOp.CONST_DOUBLE.opcode) {
+				let v: string|number = jsonCodeObject.constants[constID];
+				if(typeof v !== 'number') {
+					throw new Error('Bytecode error: expected double constant at index ' + index + ', id ' + constID);
+				}
+				op = new PushOp(new DoubleValue(v));
+			} else if(c === NativeOp.CONST_STRING.opcode) {
+				let v: string|number = jsonCodeObject.constants[constID];
+				if(typeof v !== 'string') {
+					throw new Error('Bytecode error: expected string constant at index ' + index + ', id ' + constID);
+				}
+				op = new PushOp(new StringValue(v));
+			} else {
+				let name: string = jsonCodeObject.names[constID];
 				switch(c) {
-					case NativeOp.CONST_INT.opcode:
-						if(typeof v !== 'number' || v !== (v|0)) {
-							throw new Error('Bytecode error: expected int constant at index ' + index + ', id ' + constID);
-						}
-						op = new PushOp(new IntValue(v));
-						break;
-					case NativeOp.CONST_DOUBLE.opcode:
-						if(typeof v !== 'number') {
-							throw new Error('Bytecode error: expected double constant at index ' + index + ', id ' + constID);
-						}
-						op = new PushOp(new DoubleValue(v));
-						break;
-					case NativeOp.CONST_STRING.opcode:
-						op = new PushOp(new StringValue(reqString()));
-						break;
 					case NativeOp.STORE.opcode:
-						op = new AssignOp(reqString(), false);
+						op = new AssignOp(name, false);
 						break;
 					case NativeOp.STORE_QUOTE.opcode:
-						op = new AssignOp(reqString(), true);
+						op = new AssignOp(name, true);
 						break;
 					case NativeOp.LOAD_FAST.opcode:
-						op = new LocalReadOp(reqString());
+						op = new LocalReadOp(name);
 						break;
 					case NativeOp.LOAD_SLOW.opcode:
-						op = new ReadOp(reqString());
+						op = new ReadOp(name);
 						break;
 					default:
 						throw new Error('Bytecode error: illegal opcode `' + c + '`');

@@ -75,12 +75,6 @@ class RepeatCall {
 	}
 }
 
-let trunc: (x: number) => number = ((Math as any).trunc || function(v) {
-	v = +v;
-	if(!isFinite(v)) { return v; }
-	return (v - v % 1) || (v < 0 ? -0 : v === 0 ? v : 0);
-});
-
 class Interpreter {
 	private readonly callStack: Array<Call> = [];
 	private readonly scopeStack: Array<Scope> = [new Scope()];
@@ -141,16 +135,12 @@ class Interpreter {
 					break;
 				
 				case ']':
-					if(this.valueStacks.length === 1) {
-						throw new Error("Illegal state: can't ascend from global stack");
-					}
+					if(this.valueStacks.length === 1) { _ERROR.ascendFromGlobalStack(); }
 					this.valueStacks.pop();
 					break;
 				
 				case '].':
-					if(this.valueStacks.length === 1) {
-						throw new Error("Illegal state: can't ascend from global stack");
-					}
+					if(this.valueStacks.length === 1) { _ERROR.ascendFromGlobalStack(); }
 					this.valueStacks.pop();
 					this.valueStacks.peek().v.push(vs);
 					break;
@@ -164,16 +154,12 @@ class Interpreter {
 					break;
 				
 				case '}':
-					if(this.scopeStack.length === 1) {
-						throw new Error("Illegal state: can't ascend from global scope");
-					}
+					if(this.scopeStack.length === 1) { _ERROR.ascendFromGlobalScope(); }
 					this.scopeStack.pop();
 					break;
 				
 				case '}.':
-					if(this.scopeStack.length === 1) {
-						throw new Error("Illegal state: can't ascend from global scope");
-					}
+					if(this.scopeStack.length === 1) { _ERROR.ascendFromGlobalScope(); }
 					vs.v.push(this.scopeStack.pop() as Scope);
 					break;
 				
@@ -267,25 +253,25 @@ class Interpreter {
 					break;
 				
 				case '*':
-					vs.v.push(new IntValue(this.popInt() * this.popInt()));
+					vs.v.push(new IntValue(_NATIVE.imul(this.popInt(), this.popInt())));
 					break;
 				
 				case '**':
 					let i2: number = this.popInt();
 					let i1: number = this.popInt();
-					vs.v.push(new IntValue(Math.pow(i1, i2)));
+					vs.v.push(new IntValue(_NATIVE.ipow(i1, i2)));
 					break;
 				
 				case '/':
 					i2 = this.popInt();
 					i1 = this.popInt();
-					vs.v.push(new IntValue(trunc(i1 / i2)));
+					vs.v.push(new IntValue(_NATIVE.idiv(i1, i2)));
 					break;
 				
 				case '%':
 					i2 = this.popInt();
 					i1 = this.popInt();
-					vs.v.push(new IntValue(i1 % i2));
+					vs.v.push(new IntValue(_NATIVE.imod(i1, i2)));
 					break;
 				
 				case '&':
@@ -341,27 +327,20 @@ class Interpreter {
 				if(--i >= 0) {
 					doOp = this.scopeStack[i].read(name);
 				} else {
-					doOp = NativeOp.getByName(name);
-					if(doOp === null) {
-						throw new Error('Name error: ' + name);
-					}
+					doOp = NativeOp.getByName(name) || _ERROR.nameError(name);;
 				}
 			}
 			
 			this.callStack.push(new OpCall(doOp));
 		} else if(op instanceof LocalReadOp) {
 			let name: string = op.name;
-			let doOp: Op|null = this.scopeStack.peek().read(name);
-			if(doOp === null) {
-				throw new Error('Name error: ' + name);
-			}
-			
+			let doOp: Op = this.scopeStack.peek().read(name) || _ERROR.nameError(name);;
 			this.callStack.push(new OpCall(doOp));
 		} else if(op instanceof CommentOp) {
 			// do nothing
 		} else {
 			// typecheck to make sure all ops covered
-			let typeCheck: never = op;
+			let ignore: never = op;
 			throw new Error('Illegal state: unknown operator ' + op);
 		}
 	}
@@ -379,17 +358,13 @@ class Interpreter {
 	}
 	
 	public toString(): string {
-		let sb: Array<string> = [];
+		let sb: Array<string|number> = [];
 		
 		for(let i: number = 0; i < this.valueStacks.length; ++i) {
-			sb.push(i + ': ');
-			sb.push(this.valueStacks[i].repr());
-			sb.push('\n');
+			sb.push(i, ': ', this.valueStacks[i].repr(), '\n');
 		}
 		for(let i: number = 0; i < this.scopeStack.length; ++i) {
-			sb.push(i + ': ');
-			sb.push(this.scopeStack[i].repr());
-			sb.push('\n');
+			sb.push(i, ': ', this.scopeStack[i].repr(), '\n');
 		}
 		
 		return sb.join('');

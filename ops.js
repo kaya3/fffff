@@ -37,8 +37,7 @@ var AssignOp = /** @class */ (function () {
         this.doNow = doNow;
     }
     AssignOp.prototype.compile = function (constants) {
-        var c = constants.addPrimitive(this.name, 'string');
-        return (this.doNow ? NativeOp.STORE_QUOTE : NativeOp.STORE).opcode + c.substring(1);
+        return (this.doNow ? NativeOp.STORE_QUOTE : NativeOp.STORE).opcode + constants.addName(this.name);
     };
     AssignOp.prototype.repr = function () {
         return (this.doNow ? '>!' : '>') + this.name;
@@ -62,8 +61,7 @@ var ReadOp = /** @class */ (function () {
         this.name = name;
     }
     ReadOp.prototype.compile = function (constants) {
-        var c = constants.addPrimitive(this.name, 'string');
-        return NativeOp.LOAD_SLOW.compile(constants) + c.substring(1);
+        return NativeOp.LOAD_SLOW.compile(constants) + constants.addName(this.name);
     };
     ReadOp.prototype.repr = function () {
         return this.name;
@@ -75,8 +73,7 @@ var LocalReadOp = /** @class */ (function () {
         this.name = name;
     }
     LocalReadOp.prototype.compile = function (constants) {
-        var c = constants.addPrimitive(this.name, 'string');
-        return NativeOp.LOAD_FAST.compile(constants) + c.substring(1);
+        return NativeOp.LOAD_FAST.compile(constants) + constants.addName(this.name);
     };
     LocalReadOp.prototype.repr = function () {
         return this.name;
@@ -166,3 +163,68 @@ var NativeOp = /** @class */ (function () {
     NativeOp.GREATER_THAN_OR_EQUAL = new NativeOp('>=', 'H');
     return NativeOp;
 }());
+var _NATIVE = {
+    imul: (Math.imul || function (a, b) {
+        // Math.imul polyfill
+        var aHi = (a >>> 16) & 0xffff;
+        var aLo = a & 0xffff;
+        var bHi = (b >>> 16) & 0xffff;
+        var bLo = b & 0xffff;
+        return ((aLo * bLo) + (((aHi * bLo + aLo * bHi) << 16) >>> 0) | 0);
+    }),
+    idiv: function (a, b) {
+        if (b === 0) {
+            _ERROR.arithmeticError(a + ' / ' + b);
+        }
+        return _NATIVE.trunc(a / b);
+    },
+    imod: function (a, b) {
+        if (b === 0) {
+            _ERROR.arithmeticError(a + ' % ' + b);
+        }
+        return a % b;
+    },
+    ipow: function (a, b) {
+        if (b < 0 || (a === 0 && b === 0)) {
+            _ERROR.arithmeticError(a + ' ** ' + b);
+        }
+        return Math.pow(a, b);
+    },
+    trunc: (Math.trunc || function (v) {
+        // Math.trunc polyfill
+        v = +v;
+        if (!isFinite(v)) {
+            return v;
+        }
+        return (v - v % 1) || (v < 0 ? -0 : v === 0 ? v : 0);
+    })
+};
+var _ERROR = {
+    wrongType: function (actualType, expectedType) {
+        throw new Error('Type error: expected ' + expectedType + ', was ' + actualType);
+    },
+    printNotSupported: function (actualType) {
+        throw new Error('Type error: expected string, int or double; was ' + actualType);
+    },
+    emptyStack: function () {
+        throw new Error('Illegal state: pop from empty stack');
+    },
+    peekEmptyStack: function () {
+        throw new Error('Illegal state: peek at empty stack');
+    },
+    ascendFromGlobalStack: function () {
+        throw new Error("Illegal state: can't ascend from global stack");
+    },
+    ascendFromGlobalScope: function () {
+        throw new Error("Illegal state: can't ascend from global scope");
+    },
+    nameError: function (name) {
+        throw new Error('Name error: ' + name);
+    },
+    arithmeticError: function (msg) {
+        throw new Error('Arithmetic error: ' + msg);
+    },
+    indexOutOfBounds: function (i, n) {
+        throw new Error('Index out of bounds: ' + i + ' from length ' + n);
+    }
+};

@@ -42,8 +42,7 @@ class AssignOp {
 	public constructor(public readonly name: string, public readonly doNow: boolean) {}
 	
 	public compile(constants: Constants): string {
-		let c: string = constants.addPrimitive(this.name, 'string');
-		return (this.doNow ? NativeOp.STORE_QUOTE : NativeOp.STORE).opcode + c.substring(1);
+		return (this.doNow ? NativeOp.STORE_QUOTE : NativeOp.STORE).opcode + constants.addName(this.name);
 	}
 	
 	public repr(): string {
@@ -67,8 +66,7 @@ class ReadOp {
 	public constructor(public readonly name: string) {}
 	
 	public compile(constants: Constants): string {
-		let c: string = constants.addPrimitive(this.name, 'string');
-		return NativeOp.LOAD_SLOW.compile(constants) + c.substring(1);
+		return NativeOp.LOAD_SLOW.compile(constants) + constants.addName(this.name);
 	}
 	
 	public repr(): string {
@@ -80,8 +78,7 @@ class LocalReadOp {
 	public constructor(public readonly name: string) {}
 	
 	public compile(constants: Constants): string {
-		let c: string = constants.addPrimitive(this.name, 'string');
-		return NativeOp.LOAD_FAST.compile(constants) + c.substring(1);
+		return NativeOp.LOAD_FAST.compile(constants) + constants.addName(this.name);
 	}
 	
 	public repr(): string {
@@ -187,3 +184,68 @@ class NativeOp {
 		return this.name;
 	}
 }
+
+var _NATIVE = {
+	imul: ((Math as any).imul || function(a: number, b: number): number {
+		// Math.imul polyfill
+		var aHi = (a >>> 16) & 0xffff;
+		var aLo = a & 0xffff;
+		var bHi = (b >>> 16) & 0xffff;
+		var bLo = b & 0xffff;
+		return ((aLo * bLo) + (((aHi * bLo + aLo * bHi) << 16) >>> 0) | 0);
+	}),
+	idiv: function(a: number, b: number): number {
+		if(b === 0) {
+			_ERROR.arithmeticError(a + ' / ' + b);
+		}
+		return _NATIVE.trunc(a / b);
+	},
+	imod: function(a: number, b: number): number {
+		if(b === 0) {
+			_ERROR.arithmeticError(a + ' % ' + b);
+		}
+		return a % b;
+	},
+	ipow: function(a: number, b: number): number {
+		if(b < 0 || (a === 0 && b === 0)) {
+			_ERROR.arithmeticError(a + ' ** ' + b);
+		}
+		return Math.pow(a, b);
+	},
+	trunc: ((Math as any).trunc || function(v: number): number {
+		// Math.trunc polyfill
+		v = +v;
+		if(!isFinite(v)) { return v; }
+		return (v - v % 1) || (v < 0 ? -0 : v === 0 ? v : 0);
+	})
+};
+
+var _ERROR = {
+	wrongType: function(actualType: string, expectedType: string): never {
+		throw new Error('Type error: expected ' + expectedType + ', was ' + actualType);
+	},
+	printNotSupported: function(actualType: string): never {
+		throw new Error('Type error: expected string, int or double; was ' + actualType);
+	},
+	emptyStack: function(): never {
+		throw new Error('Illegal state: pop from empty stack');
+	},
+	peekEmptyStack: function(): never {
+		throw new Error('Illegal state: peek at empty stack');
+	},
+	ascendFromGlobalStack: function(): never {
+		throw new Error("Illegal state: can't ascend from global stack");
+	},
+	ascendFromGlobalScope: function(): never {
+		throw new Error("Illegal state: can't ascend from global scope");
+	},
+	nameError: function(name: string): never {
+		throw new Error('Name error: ' + name);
+	},
+	arithmeticError: function(msg: string): never {
+		throw new Error('Arithmetic error: ' + msg);
+	},
+	indexOutOfBounds: function(i: number, n: number): never {
+		throw new Error('Index out of bounds: ' + i + ' from length ' + n);
+	},
+};

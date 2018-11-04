@@ -1,11 +1,6 @@
 "use strict";
 function typecheck(v, typeTag) {
-    if (v.type === typeTag) {
-        return v;
-    }
-    else {
-        throw new Error('Type error: expected ' + typeTag + ', was ' + v.type);
-    }
+    return v.type === typeTag ? v : _ERROR.wrongType(v.type, typeTag);
 }
 var StringValue = /** @class */ (function () {
     function StringValue(v) {
@@ -58,8 +53,7 @@ var StringValue = /** @class */ (function () {
                 default:
                     var cc = c.charCodeAt(i);
                     if (cc < 0x20 || cc > 0x7F) {
-                        sb.push('\\u');
-                        sb.push(('0000' + cc.toString(16)).substr(-4));
+                        sb.push('\\u', ('0000' + cc.toString(16)).substr(-4));
                     }
                     else {
                         sb.push(c);
@@ -133,9 +127,8 @@ var Quote = /** @class */ (function () {
             var sb = ['('];
             var glue = '';
             for (var i = 0; i < this.ops.length; ++i) {
-                sb.push(glue);
+                sb.push(glue, this.ops[i].repr());
                 glue = ' ';
-                sb.push(this.ops[i].repr());
             }
             sb.push(')');
             this.isStringing = false;
@@ -163,14 +156,11 @@ var VStack = /** @class */ (function () {
         return this.v.peek();
     };
     VStack.prototype.popAny = function () {
-        if (this.v.length === 0) {
-            throw new Error('Illegal state: pop from empty stack');
-        }
-        return this.v.pop();
+        return this.v.pop() || _ERROR.emptyStack();
     };
     VStack.prototype.get = function (index) {
         if (index < 0 || index >= this.v.length) {
-            throw new Error('Illegal index: ' + index + ' from length ' + this.v.length);
+            _ERROR.indexOutOfBounds(index, this.v.length);
         }
         return this.v[index];
     };
@@ -183,9 +173,8 @@ var VStack = /** @class */ (function () {
             var sb = ['['];
             var glue = '';
             for (var i = 0; i < this.v.length; ++i) {
-                sb.push(glue);
+                sb.push(glue, this.v[i].repr());
                 glue = ' ';
-                sb.push(this.v[i].repr());
             }
             sb.push('].');
             this.isStringing = false;
@@ -239,12 +228,10 @@ var Scope = /** @class */ (function () {
                     glue = ' ';
                     var op = this.v[k];
                     if (op instanceof PushOp) {
-                        sb.push(op.v.repr());
-                        sb.push('>');
+                        sb.push(op.v.repr(), '>');
                     }
                     else {
-                        sb.push(op.q.repr());
-                        sb.push('>!');
+                        sb.push(op.q.repr(), '>!');
                     }
                     sb.push(k);
                 }

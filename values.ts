@@ -19,11 +19,7 @@ type ValueTypeTags = {
 };
 
 function typecheck<T extends Value['type']>(v: Value, typeTag: T): ValueTypeTags[T] {
-	if(v.type === typeTag) {
-		return v;
-	} else {
-		throw new Error('Type error: expected ' + typeTag + ', was ' + v.type);
-	}
+	return v.type === typeTag ? v : _ERROR.wrongType(v.type, typeTag);
 }
 
 
@@ -81,8 +77,7 @@ class StringValue {
 				default:
 					let cc: number = c.charCodeAt(i);
 					if(cc < 0x20 || cc > 0x7F) {
-						sb.push('\\u');
-						sb.push(('0000' + cc.toString(16)).substr(-4));
+						sb.push('\\u', ('0000' + cc.toString(16)).substr(-4));
 					} else {
 						sb.push(c);
 					}
@@ -162,9 +157,8 @@ class Quote {
 			
 			let glue: string = '';
 			for(let i: number = 0; i < this.ops.length; ++i) {
-				sb.push(glue);
+				sb.push(glue, this.ops[i].repr());
 				glue = ' ';
-				sb.push(this.ops[i].repr());
 			}
 			
 			sb.push(')');
@@ -196,13 +190,12 @@ class VStack {
 	}
 	
 	public popAny(): Value {
-		if(this.v.length === 0) { throw new Error('Illegal state: pop from empty stack'); }
-		return this.v.pop() as Value;
+		return this.v.pop() as Value || _ERROR.emptyStack();
 	}
 	
 	public get(index: number): Value {
 		if(index < 0 || index >= this.v.length) {
-			throw new Error('Illegal index: ' + index + ' from length ' + this.v.length);
+			_ERROR.indexOutOfBounds(index, this.v.length);
 		}
 		return this.v[index];
 	}
@@ -217,9 +210,8 @@ class VStack {
 			
 			let glue: string = '';
 			for(let i: number = 0; i < this.v.length; ++i) {
-				sb.push(glue);
+				sb.push(glue, this.v[i].repr());
 				glue = ' ';
-				sb.push(this.v[i].repr());
 			}
 			
 			sb.push('].');
@@ -278,11 +270,9 @@ class Scope {
 					
 					let op: Op = this.v[k];
 					if(op instanceof PushOp) {
-						sb.push(op.v.repr());
-						sb.push('>');
+						sb.push(op.v.repr(), '>');
 					} else {
-						sb.push(op.q.repr());
-						sb.push('>!');
+						sb.push(op.q.repr(), '>!');
 					}
 					sb.push(k);
 				}

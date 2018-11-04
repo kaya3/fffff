@@ -65,13 +65,6 @@ var RepeatCall = /** @class */ (function () {
     };
     return RepeatCall;
 }());
-var trunc = (Math.trunc || function (v) {
-    v = +v;
-    if (!isFinite(v)) {
-        return v;
-    }
-    return (v - v % 1) || (v < 0 ? -0 : v === 0 ? v : 0);
-});
 var Interpreter = /** @class */ (function () {
     function Interpreter(out) {
         if (out === void 0) { out = console.log; }
@@ -124,13 +117,13 @@ var Interpreter = /** @class */ (function () {
                     break;
                 case ']':
                     if (this.valueStacks.length === 1) {
-                        throw new Error("Illegal state: can't ascend from global stack");
+                        _ERROR.ascendFromGlobalStack();
                     }
                     this.valueStacks.pop();
                     break;
                 case '].':
                     if (this.valueStacks.length === 1) {
-                        throw new Error("Illegal state: can't ascend from global stack");
+                        _ERROR.ascendFromGlobalStack();
                     }
                     this.valueStacks.pop();
                     this.valueStacks.peek().v.push(vs);
@@ -143,13 +136,13 @@ var Interpreter = /** @class */ (function () {
                     break;
                 case '}':
                     if (this.scopeStack.length === 1) {
-                        throw new Error("Illegal state: can't ascend from global scope");
+                        _ERROR.ascendFromGlobalScope();
                     }
                     this.scopeStack.pop();
                     break;
                 case '}.':
                     if (this.scopeStack.length === 1) {
-                        throw new Error("Illegal state: can't ascend from global scope");
+                        _ERROR.ascendFromGlobalScope();
                     }
                     vs.v.push(this.scopeStack.pop());
                     break;
@@ -227,22 +220,22 @@ var Interpreter = /** @class */ (function () {
                     vs.v.push(new IntValue((-this.popInt()) + this.popInt()));
                     break;
                 case '*':
-                    vs.v.push(new IntValue(this.popInt() * this.popInt()));
+                    vs.v.push(new IntValue(_NATIVE.imul(this.popInt(), this.popInt())));
                     break;
                 case '**':
                     var i2 = this.popInt();
                     var i1 = this.popInt();
-                    vs.v.push(new IntValue(Math.pow(i1, i2)));
+                    vs.v.push(new IntValue(_NATIVE.ipow(i1, i2)));
                     break;
                 case '/':
                     i2 = this.popInt();
                     i1 = this.popInt();
-                    vs.v.push(new IntValue(trunc(i1 / i2)));
+                    vs.v.push(new IntValue(_NATIVE.idiv(i1, i2)));
                     break;
                 case '%':
                     i2 = this.popInt();
                     i1 = this.popInt();
-                    vs.v.push(new IntValue(i1 % i2));
+                    vs.v.push(new IntValue(_NATIVE.imod(i1, i2)));
                     break;
                 case '&':
                     vs.v.push(new IntValue(this.popInt() & this.popInt()));
@@ -294,20 +287,16 @@ var Interpreter = /** @class */ (function () {
                     doOp = this.scopeStack[i].read(name_1);
                 }
                 else {
-                    doOp = NativeOp.getByName(name_1);
-                    if (doOp === null) {
-                        throw new Error('Name error: ' + name_1);
-                    }
+                    doOp = NativeOp.getByName(name_1) || _ERROR.nameError(name_1);
+                    ;
                 }
             }
             this.callStack.push(new OpCall(doOp));
         }
         else if (op instanceof LocalReadOp) {
             var name_2 = op.name;
-            var doOp = this.scopeStack.peek().read(name_2);
-            if (doOp === null) {
-                throw new Error('Name error: ' + name_2);
-            }
+            var doOp = this.scopeStack.peek().read(name_2) || _ERROR.nameError(name_2);
+            ;
             this.callStack.push(new OpCall(doOp));
         }
         else if (op instanceof CommentOp) {
@@ -315,7 +304,7 @@ var Interpreter = /** @class */ (function () {
         }
         else {
             // typecheck to make sure all ops covered
-            var typeCheck = op;
+            var ignore = op;
             throw new Error('Illegal state: unknown operator ' + op);
         }
     };
@@ -331,14 +320,10 @@ var Interpreter = /** @class */ (function () {
     Interpreter.prototype.toString = function () {
         var sb = [];
         for (var i = 0; i < this.valueStacks.length; ++i) {
-            sb.push(i + ': ');
-            sb.push(this.valueStacks[i].repr());
-            sb.push('\n');
+            sb.push(i, ': ', this.valueStacks[i].repr(), '\n');
         }
         for (var i = 0; i < this.scopeStack.length; ++i) {
-            sb.push(i + ': ');
-            sb.push(this.scopeStack[i].repr());
-            sb.push('\n');
+            sb.push(i, ': ', this.scopeStack[i].repr(), '\n');
         }
         return sb.join('');
     };

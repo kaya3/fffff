@@ -7,6 +7,7 @@
 <script src="parser.js"></script>
 <script src="main.js"></script>
 <script src="bytecode.js"></script>
+<script src="jit.js"></script>
 <style type="text/css">
 #src { width: 100%; height: 50vh; resize: none; }
 pre { white-space: pre-wrap; }
@@ -22,21 +23,28 @@ pre { white-space: pre-wrap; }
 <pre id="compiled_output"></pre>
 <h2>Decompiled output</h2>
 <pre id="decompiled_output"></pre>
+<h2>JavaScript output</h2>
+<pre id="js_output"></pre>
 <script type="text/javascript">
 	var src = document.getElementById('src');
 	var error_message = document.getElementById('error_message');
 	var compiled_output = document.getElementById('compiled_output');
 	var decompiled_output = document.getElementById('decompiled_output');
+	var js_output = document.getElementById('js_output');
 	function compile() {
 		error_message.innerText = '';
 		compiled_output.innerText = '';
 		decompiled_output.innerText = '';
+		js_output.innerText = '';
 		try {
 			var q = Parser.parse(src.value);
 			var co = new CodeObject(q);
-			let j = co.toJSON();
+			var j = co.toJSON();
 			compiled_output.innerText = JSON.stringify(j);
 			decompiled_output.innerText = decompile(j);
+			var f = new JITCompiler(j).compileAll();
+			js_output.innerText = f.toString();
+			f(_NATIVE, console.log, _ERROR);
 		} catch(e) {
 			error_message.innerText = e.message;
 			throw e;
