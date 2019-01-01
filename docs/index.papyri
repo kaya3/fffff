@@ -1,0 +1,231 @@
+
+@title{fffff Documentation}
+
+@b{fffff} is a @href(`https://en.wikipedia.org/wiki/Stack-oriented_programming`) {stack-oriented} @href(`https://en.wikipedia.org/wiki/Concatenative_programming_language`) {concatenative programming language}.
+It has @href(`https://en.wikipedia.org/wiki/Type_system#Dynamic_type_checking_and_runtime_type_information`) {dynamic types}, and @href(`https://en.wikipedia.org/wiki/First-class_citizen`) {first-class} @href(`https://en.wikipedia.org/wiki/Scope_(computer_science)#Dynamic_scoping`) {dynamic scopes}.
+fffff is designed to be easy to implement, not easy to write in.
+
+The following example defines a function named `square`, which squares the number on top of the stack by storing it in a local variable `x`, pushing two copies of `x` to the stack, then multiplying them:
+
+```
+	({ >x x x * }) >!square
+```
+
+The following example then defines a function which takes the fourth power of the number on top of the stack, by calling `square` twice:
+
+```
+	(square square) >!fourth
+```
+
+This is effectively @href(`https://en.wikipedia.org/wiki/Function_composition_(computer_science)`) {function composition} --- `fourth` is defined by composing `square` with itself.
+Programming in fffff is a mixture of low-level stack manipulation and high-level
+@href(`https://en.wikipedia.org/wiki/Point-free_programming`) {point-free} functional programming.
+
+
+
+@subtitle{Numbers}
+
+The only numeric type is a signed 32-bit integer.
+An integer literal is written in decimal, with a leading~`-` for negative numbers.
+An integer literal is an instruction which, when executed, pushes its own value to the stack.
+
+There are the following numeric operations:
+
+[
+	{Arithmetic: `+`, `-`, `*`, `/`, `**` (power), `%` (modulo)},
+	{Bitwise: `&`, `|`, `~` (inverse), `^` (xor), operating on the @href(`https://en.wikipedia.org/wiki/Two's_complement`) {two's complement} representation},
+	{Comparison: `=`, `<`, `<=`, `>`, `>=`},
+]
+
+Operations take their operands off the stack and push their results to the stack, so for example `3 2 **` means "3 to the power of 2" and leaves `9` on the stack.
+
+@info {
+	Note that the operation `**` is written after the instructions to push `3` and `2` to the stack; this is @href(`https://en.wikipedia.org/wiki/Reverse_Polish_notation`) {reverse Polish notation}.
+}
+
+
+
+@subtitle{Booleans}
+
+The keywords `true` and `false` are Boolean literals.
+They are instructions which, when executed, push their own value to the stack.
+
+The logical operations are the keywords `and`, `or` and `not`.
+Logical operations likewise take their operands off the stack, leave their results on the stack, and must be written using reverse Polish notation.
+
+The logical operations `and` and `or` are not @href(`https://en.wikipedia.org/wiki/Short-circuit_evaluation`) {short-circuiting}, since their Boolean operands must already be on the stack.
+
+
+
+@subtitle{Strings}
+
+A string literal is delimited by an odd number of single-quote characters~`'`, or by an odd number of double-quote characters~`"`.
+The escape sequences `\'`, `\"`, `\\`, `\n`, `\r`, `\t`, `\b` and `\f` have their usual meanings.
+A unicode escape sequence may be written in the form `\uXXXX`, where `XXXX` is a four-digit hexadecimal value.
+
+If a string literal's delimiter has three or more quote characters, then it is a multi-line string literal and may contain unescaped newlines.
+It is a syntax error for a string literal delimited by one quote character to contain an unescaped newline.
+
+
+
+@subtitle{Comments}
+
+A line comment begins with a~`#`.
+Everything from this character until the line ending is ignored.
+fffff does not have multiline comments, but they can be simulated with multi-line string literals:
+
+```
+	"""
+	This is a multi-line string, followed by the `del` keyword to delete it from
+	the top of the stack. This snippet will have no effect on the program's
+	execution, so it is effectively a comment.
+	""" del
+```
+
+
+
+@subtitle{Printing}
+
+The keywords `print` and `println` each pop a value from the stack and prints it to the console.
+The difference between them is that `println` also prints a newline.
+For example, the following program prints the text @href(`https://en.wikipedia.org/wiki/%22Hello,_World!%22_program`) {Hello, world!} to the console:
+
+```
+	"Hello, world!" println
+```
+
+If the value to be printed is not a string, it is first converted to a string.
+
+
+
+@subtitle{Variables}
+
+A variable name begins with a letter or underscore, followed by any number of letters, digits or underscores.
+
+The operation~`>x` pops a value from the stack and stores it in the current scope; the operation `x` then pushes that value to the stack.
+
+While it is convenient to think of variables as having values, this is @b{not} technically accurate.
+In fffff, variables contain @b{instructions}, and named functions (such as `square` in the example above) are also variables.
+The operation `>x` does not store a value in the variable `x`; rather, it stores an instruction to push that value to the stack.
+
+
+
+@subtitle{Quotes}
+
+A @b{quote} is analagous to a @href(`https://en.wikipedia.org/wiki/Anonymous_function`) {function literal} in other languages.
+Quotes are delimited by round brackets~`(` and `)`.
+Instructions between these brackets are not executed immediately; rather, the quote itself is pushed to the stack, and its instructions will be executed whenever the quote is "called".
+The operation~`!` pops a quote from the stack, and calls it.
+
+Quotes are immutable, and are first-class objects.
+A quote can be pushed to a stack or stored in a variable.
+
+When a quote is stored in a variable with an instruction such as `>f`, the variable `f` contains an instruction to push the quote to the stack; not to call it.
+The quote can be called by writing `f!`, which uses the `!` operation to call the quote.
+
+Alternatively, the syntax~`>!f` can be used to store an instruction to call the quote, so that the quote can be called simply by writing `f`.
+
+
+
+@subtitle{Control flow}
+
+The keyword `repeat` is a looping instruction which calls a quote repeatedly.
+Its operands are the quote and the number of repetitions.
+The following example prints the word "Hello" five times:
+
+```
+	("Hello" println) 5 repeat
+```
+
+The keyword `if` is a conditional instruction which calls (or doesn't call) a quote depending on a Boolean condition.
+Its operands are the quote and a Boolean value.
+The following example prints the word "Hello" if `x` equals `y`, otherwise it does nothing:
+
+```
+	("Hello" println) x y = if
+```
+
+
+
+@subtitle{Stacks}
+
+Unlike other stack-based languages which use a single stack, fffff allows the use of local stacks.
+
+A left square bracket~`[` creates a new local stack and @b{descends} to it; a right square bracket~`]` @b{ascends} from it.
+These are separate operations; in particular, it is @b{not} a syntax error for them to be unmatched.
+
+Stacks are mutable, and are first-class objects.
+A reference to a stack can be pushed to another stack (or itself), or "stored" in a variable.
+
+The operation~`.[` @b{enters} a stack by popping a reference from the current stack and descending to it; the operation~`].` @b{exits} the current stack by ascending from it and pushing a reference to it to the new current stack.
+For example, `[1 2 3].` creates a stack containing the numbers 1, 2, 3, leaving a reference to it on the current stack.
+
+@info {
+	Note that there are no commas between the stack's elements; the integer literals are really 	instructions to push values to the stack, with spaces separating the instructions.
+}
+
+The following keywords are operations on stacks:
+
+[
+	{`push` --- for example, `[1 2 3]. 4 push` is equivalent to `[1 2 3 4].`},
+	{`pop` --- for example, `[1 2 3]. pop` is equivalent to `[1 2]. 3`},
+	{`get` gets an element from the stack by index --- for example, `[1 2 3]. 0 get`},
+	{`len` gives the length of the stack --- for example, `[1 2 3]. len`},
+]
+
+The keyword `stack` pushes a reference to the current stack to the current stack (i.e.~itself).
+
+
+
+@subtitle{The metastack}
+
+There is a special "stack of stacks" called the @b{metastack}, which is manipulated when descending to or ascending from a stack.
+The @b{current stack} is the one at the top of the metastack.
+Unless otherwise specified, in this documentation the phrase "the stack" means the current stack.
+
+Initially, the metastack contains a single empty stack, which is the @b{global stack}.
+Descending to a stack pushes it to the metastack, making it the current stack; ascending from the current stack pops it from the metastack.
+It is a runtime error to ascend from the global stack leaving the metastack empty.
+
+The metastack is not a first-class object; there is no way to obtain a reference to it.
+
+
+
+@subtitle{Scopes}
+
+A scope contains variables, each of which is a name associated with an instruction.
+The instruction is either to push a value to the stack, or to call a quote.
+
+A left curly brace~`{` descends to a new local scope; a right curly brace~`}` ascends from it.
+These are separate operations; in particular, it is @b{not} a syntax error for them to be unmatched.
+
+Scopes are mutable, and are first-class objects.
+A reference to a scope can be pushed to a stack, or "stored" in a variable.
+
+The operation~`.{` enters a scope by popping a reference from the current stack and descending to it; the operation~`}.` exits the current scope by ascending from it and pushing a reference to it to the current stack.
+
+The keyword `this` pushes a reference to the current scope to the current stack.
+
+
+
+@subtitle{The scopestack}
+
+Like the metastack, there is a special "stack of scopes" called the @b{scopestack}, which is manipulated when descending to or ascending from a scope.
+The @b{current scope} is the one at the top of the scopestack.
+
+Initially, the scopestack contains a single empty scope, which is the @b{global scope}.
+Descending to a scope pushes it to the scopestack, making it the current scope; ascending from the current scope pops it from the scopestack.
+It is a runtime error to ascend from the global scope leaving the scopestack empty.
+
+An instruction like `>x` always stores in the current scope.
+However, the instruction `x` does not necessarily load from the current scope; it loads from whichever scope nearest the top of the scopestack has a variable named `x`.
+It is a runtime error if no scopes in the scopestack have such a variable.
+This is known as @href(`https://en.wikipedia.org/wiki/Scope_(computer_science)#Dynamic_scoping`) {dynamic scoping}.
+
+The scopestack is not a first-class object; there is no way to obtain a reference to it.
+
+
+
+
+
+

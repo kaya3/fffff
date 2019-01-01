@@ -5,7 +5,7 @@ var JITCompiler = /** @class */ (function () {
     }
     JITCompiler.prototype.compileAll = function () {
         var sb = [
-            'var _stack = _NATIVE.stack(), _scope = _NATIVE.scope(), _stacks = [_stack], _scopes = [_scope], _tmp1, _tmp2, _tmp3;\n',
+            'var _stack = _NATIVE.stack(), _scope = _NATIVE.scope(), _stacks = [_stack], _scopes = [_scope], _tmp1, _tmp2;\n',
             '_scope.store("document", new JSObjectWrapper(document));\n',
             '_scope.store("window", new JSObjectWrapper(window));\n'
         ];
@@ -117,8 +117,9 @@ var JITCompiler = /** @class */ (function () {
                 this.writePushNewValue(sb, '_tmp1.length()', 'int');
                 break;
             case NativeOp.GET.opcode:
-                this.writePop(sb, '_tmp1', 'int');
-                sb.push('\t', '_stack.push(_stack.getValue(_tmp1.v));\n');
+                this.writePop(sb, '_tmp2', 'int');
+                this.writePeek(sb, '_tmp1', 'stack');
+                sb.push('\t', '_stack.push(_tmp1.getValue(_tmp2.v));\n');
                 break;
             case NativeOp.AND.opcode:
                 this.writePop(sb, '_tmp2', 'boolean');

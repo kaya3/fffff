@@ -180,7 +180,8 @@ var Interpreter = /** @class */ (function () {
                     break;
                 case 'get':
                     var i = this.popInt();
-                    vs.push(vs.getValue(i));
+                    s = vs.peek('stack');
+                    vs.push(s.getValue(i));
                     break;
                 case 'and':
                     var b1 = this.popBool();

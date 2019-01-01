@@ -203,7 +203,8 @@ class Interpreter {
 				
 				case 'get':
 					let i: number = this.popInt();
-					vs.push(vs.getValue(i));
+					s = vs.peek('stack');
+					vs.push(s.getValue(i));
 					break;
 				
 				case 'and':
