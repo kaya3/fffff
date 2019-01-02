@@ -4,19 +4,22 @@ type JITRuntimeValue = IntValue|DoubleValue|StringValue|BoolValue|VStack|Scope|J
 type JITRuntimeTypeTag = JITRuntimeValue['type'];
 
 class JITCompiler {
-	private static readonly opCodesWithConstants: string = NativeOp.CONST_INT.opcode + NativeOp.CONST_DOUBLE.opcode + NativeOp.CONST_STRING.opcode + NativeOp.CONST_QUOTE.opcode + NativeOp.STORE.opcode + NativeOp.STORE_QUOTE.opcode + NativeOp.LOAD_FAST.opcode + NativeOp.LOAD_SLOW.opcode;
+	private static readonly opCodesWithConstants: string = NativeOp.CONST_INT.opcode + NativeOp.CONST_DOUBLE.opcode + NativeOp.CONST_STRING.opcode + NativeOp.CONST_QUOTE.opcode + NativeOp.DUP.opcode + NativeOp.STORE.opcode + NativeOp.STORE_QUOTE.opcode + NativeOp.LOAD_FAST.opcode + NativeOp.LOAD_SLOW.opcode;
 	
 	public constructor(public readonly jsonCodeObject: JSONCodeObject) {}
 	
 	public compileAll(): Function {
 		let sb: Array<string|number> = [
-			'var _stack = _NATIVE.stack(), _scope = _NATIVE.scope(), _stacks = [_stack], _scopes = [_scope], _tmp1, _tmp2;\n',
+			'var _stack = _NATIVE.stack(), _scope = _NATIVE.scope(), _stacks = [_stack], _scopes = [_scope];\n',
 			'_scope.store("document", new JSObjectWrapper(document));\n',
 			'_scope.store("window", new JSObjectWrapper(window));\n'
 		];
 		
 		for(let i: number = this.jsonCodeObject.bytecode.length-1; i >= 0; --i) {
-			sb.push('var _q', i, ' = function() {\n');
+			sb.push(
+				'var _q', i, ' = function() {\n',
+				'\t', 'var _tmp1, _tmp2;\n'
+			);
 			this.compileByteCode(i, this.jsonCodeObject.bytecode[i], sb);
 			sb.push('};\n');
 		}
@@ -33,7 +36,7 @@ class JITCompiler {
 			//sb.push('console.log("opCode: ' + c + '");\n');
 			//sb.push('console.log({ stacks: _stacks, stack: _stack });\n');
 			let op: Op|null = NativeOp.getByOpCode(c);
-			if(op === null) {
+			if(!op) {
 				throw new Error('Bytecode error: illegal opcode `' + c + '` at index ' + index + ', position ' + (pos-1));
 			} else if(JITCompiler.opCodesWithConstants.indexOf(c) >= 0) {
 				let constIDstr: string = extractID(index, bc, pos);
@@ -94,7 +97,7 @@ class JITCompiler {
 			
 			case NativeOp.SCOPE_EXIT.opcode:
 				sb.push(
-					'\t', 'if(_stacks.length === 1) { _ERROR.ascendFromGlobalScope(); }\n',
+					'\t', 'if(_scopes.length === 1) { _ERROR.ascendFromGlobalScope(); }\n',
 					'\t', '_stack.push(_scopes.pop());\n',
 					'\t', '_scope = _scopes[_scopes.length-1];\n'
 				);
@@ -250,30 +253,38 @@ class JITCompiler {
 				break;
 			
 			case NativeOp.BIT_AND.opcode:
-				// TODO: allow doubles
 				this.writePop(sb, '_tmp2', 'int');
 				this.writePop(sb, '_tmp1', 'int');
 				this.writePushNewValue(sb, '_tmp1.v & _tmp2.v', 'int');
 				break;
 			
 			case NativeOp.BIT_OR.opcode:
-				// TODO: allow doubles
 				this.writePop(sb, '_tmp2', 'int');
 				this.writePop(sb, '_tmp1', 'int');
 				this.writePushNewValue(sb, '_tmp1.v | _tmp2.v', 'int');
 				break;
 			
 			case NativeOp.BIT_NEG.opcode:
-				// TODO: allow doubles
 				this.writePop(sb, '_tmp1', 'int');
 				this.writePushNewValue(sb, '~_tmp1.v', 'int');
 				break;
 			
-			case NativeOp.BIT_XOR.opcode:
-				// TODO: allow doubles
+			case NativeOp.BIT_LSHIFT.opcode:
 				this.writePop(sb, '_tmp2', 'int');
 				this.writePop(sb, '_tmp1', 'int');
-				this.writePushNewValue(sb, '_tmp1.v ^ _tmp2.v', 'int');
+				this.writePushNewValue(sb, '_tmp1.v << _tmp2.v', 'int');
+				break;
+			
+			case NativeOp.BIT_RSHIFT.opcode:
+				this.writePop(sb, '_tmp2', 'int');
+				this.writePop(sb, '_tmp1', 'int');
+				this.writePushNewValue(sb, '_tmp1.v >> _tmp2.v', 'int');
+				break;
+			
+			case NativeOp.BIT_URSHIFT.opcode:
+				this.writePop(sb, '_tmp2', 'int');
+				this.writePop(sb, '_tmp1', 'int');
+				this.writePushNewValue(sb, '_tmp1.v >>> _tmp2.v', 'int');
 				break;
 			
 			case NativeOp.EQUALS.opcode:
@@ -350,6 +361,13 @@ class JITCompiler {
 					throw new Error('Bytecode error: expected string constant at index ' + index + ', id ' + constID);
 				}
 				this.writePushNewValue(sb, JSON.stringify(v), 'string');
+				break;
+			
+			case NativeOp.DUP.opcode:
+				if(constID === 0) {
+					throw new Error('Bytecode error: cannot DUP 0 at index ' + index);
+				}
+				sb.push('\t', '_stack.push(_stack.getValue(_stack.length() - ', constID, '));\n');
 				break;
 			
 			case NativeOp.STORE.opcode:

@@ -126,6 +126,11 @@ function decompile(jsonCodeObject: JSONCodeObject, index: number = 0): Quote {
 					throw new Error('Bytecode error: expected string constant at index ' + index + ', id ' + constID);
 				}
 				op = new PushOp(new StringValue(v));
+			} else if(c === NativeOp.DUP.opcode) {
+				if(constID === 0) {
+					throw new Error('Bytecode error: cannot DUP 0 at index ' + index);
+				}
+				op = new DupOp(constID);
 			} else {
 				let name: string = jsonCodeObject.names[constID];
 				switch(c) {

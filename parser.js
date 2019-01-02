@@ -83,6 +83,14 @@ var Parser = /** @class */ (function () {
             ++this.pos;
             q.ops.push(NativeOp.NOW);
         }
+        else if (c === '@') {
+            var i = 0;
+            do {
+                ++this.pos;
+                ++i;
+            } while (this.pos < this.src.length && this.src[this.pos] === '@');
+            q.ops.push(new DupOp(i));
+        }
         else if (c === '.') {
             if (++this.pos === this.src.length) {
                 throw new Error("Syntax error: unexpected end of source: expected .[ or .{ or .identifier");
@@ -138,7 +146,7 @@ var Parser = /** @class */ (function () {
         else if (this.digitChar(c) || (c === '-' && this.pos + 1 < this.src.length && this.digitChar(this.src[this.pos + 1]))) {
             q.ops.push(new PushOp(this.nextNumber()));
         }
-        else if (c === '>' && this.pos + 1 < this.src.length && (this.identifierChar(this.src[this.pos + 1]) || this.src[this.pos + 1] === '!')) {
+        else if ((c === '<' || c === '>') && this.pos + 1 < this.src.length && (this.identifierChar(this.src[this.pos + 1]) || (c === '>' && this.src[this.pos + 1] === '!'))) {
             var Assignment = /** @class */ (function () {
                 function Assignment() {
                     this.names = [];
@@ -150,7 +158,8 @@ var Parser = /** @class */ (function () {
             var assignments = [];
             do {
                 var a = new Assignment();
-                if (this.src[++this.pos] === '!') {
+                ++this.pos;
+                if (c === '>' && this.src[this.pos] === '!') {
                     a.doNow = true;
                     ++this.pos;
                 }
@@ -160,12 +169,12 @@ var Parser = /** @class */ (function () {
                 assignments.push(a);
             } while (this.pos < this.src.length && this.src[this.pos] === ',');
             while (assignments.length) {
-                var a = assignments.pop();
+                var a = (c === '<' ? assignments.shift() : assignments.pop());
                 var scopes = 0;
                 while (true) {
                     var name_2 = a.names.shift();
                     if (!a.names.length) {
-                        q.ops.push(new AssignOp(name_2, a.doNow));
+                        q.ops.push(c === '<' ? new LocalReadOp(name_2) : new AssignOp(name_2, a.doNow));
                         break;
                     }
                     else {

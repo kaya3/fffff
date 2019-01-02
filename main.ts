@@ -287,6 +287,24 @@ class Interpreter {
 					vs.push(new IntValue(~this.popInt()));
 					break;
 				
+				case '<<':
+					i2 = this.popInt();
+					i1 = this.popInt();
+					vs.push(new IntValue(i1 << i2));
+					break;
+				
+				case '>>':
+					i2 = this.popInt();
+					i1 = this.popInt();
+					vs.push(new IntValue(i1 >>> i2));
+					break;
+				
+				case '>>>':
+					i2 = this.popInt();
+					i1 = this.popInt();
+					vs.push(new IntValue(i1 >>> i2));
+					break;
+				
 				// TODO: allow comparisons of other types
 				case '=':
 					vs.push(_NATIVE.boolean(this.popInt() === this.popInt()));
@@ -311,7 +329,9 @@ class Interpreter {
 				
 				default:
 					throw new Error('Illegal state: unknown operator ' + op);
-				}
+			}
+		} else if(op instanceof DupOp) {
+			vs.push(vs.getValue(vs.length() - op.i));
 		} else if(op instanceof QuotedOp) {
 			this.callStack.push(new QuoteCall(op.q));
 		} else if(op instanceof PushOp) {

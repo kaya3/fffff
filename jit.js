@@ -5,12 +5,12 @@ var JITCompiler = /** @class */ (function () {
     }
     JITCompiler.prototype.compileAll = function () {
         var sb = [
-            'var _stack = _NATIVE.stack(), _scope = _NATIVE.scope(), _stacks = [_stack], _scopes = [_scope], _tmp1, _tmp2;\n',
+            'var _stack = _NATIVE.stack(), _scope = _NATIVE.scope(), _stacks = [_stack], _scopes = [_scope];\n',
             '_scope.store("document", new JSObjectWrapper(document));\n',
             '_scope.store("window", new JSObjectWrapper(window));\n'
         ];
         for (var i = this.jsonCodeObject.bytecode.length - 1; i >= 0; --i) {
-            sb.push('var _q', i, ' = function() {\n');
+            sb.push('var _q', i, ' = function() {\n', '\t', 'var _tmp1, _tmp2;\n');
             this.compileByteCode(i, this.jsonCodeObject.bytecode[i], sb);
             sb.push('};\n');
         }
@@ -25,7 +25,7 @@ var JITCompiler = /** @class */ (function () {
             //sb.push('console.log("opCode: ' + c + '");\n');
             //sb.push('console.log({ stacks: _stacks, stack: _stack });\n');
             var op = NativeOp.getByOpCode(c);
-            if (op === null) {
+            if (!op) {
                 throw new Error('Bytecode error: illegal opcode `' + c + '` at index ' + index + ', position ' + (pos - 1));
             }
             else if (JITCompiler.opCodesWithConstants.indexOf(c) >= 0) {
@@ -66,7 +66,7 @@ var JITCompiler = /** @class */ (function () {
                 sb.push('\t', '_scopes.push(_scope = _tmp1);\n');
                 break;
             case NativeOp.SCOPE_EXIT.opcode:
-                sb.push('\t', 'if(_stacks.length === 1) { _ERROR.ascendFromGlobalScope(); }\n', '\t', '_stack.push(_scopes.pop());\n', '\t', '_scope = _scopes[_scopes.length-1];\n');
+                sb.push('\t', 'if(_scopes.length === 1) { _ERROR.ascendFromGlobalScope(); }\n', '\t', '_stack.push(_scopes.pop());\n', '\t', '_scope = _scopes[_scopes.length-1];\n');
                 break;
             case NativeOp.NOW.opcode:
                 this.writePop(sb, '_tmp1', 'function');
@@ -188,27 +188,33 @@ var JITCompiler = /** @class */ (function () {
                 this.writePushNewValue(sb, '_NATIVE.imod(_tmp1.v, _tmp2.v)', 'int');
                 break;
             case NativeOp.BIT_AND.opcode:
-                // TODO: allow doubles
                 this.writePop(sb, '_tmp2', 'int');
                 this.writePop(sb, '_tmp1', 'int');
                 this.writePushNewValue(sb, '_tmp1.v & _tmp2.v', 'int');
                 break;
             case NativeOp.BIT_OR.opcode:
-                // TODO: allow doubles
                 this.writePop(sb, '_tmp2', 'int');
                 this.writePop(sb, '_tmp1', 'int');
                 this.writePushNewValue(sb, '_tmp1.v | _tmp2.v', 'int');
                 break;
             case NativeOp.BIT_NEG.opcode:
-                // TODO: allow doubles
                 this.writePop(sb, '_tmp1', 'int');
                 this.writePushNewValue(sb, '~_tmp1.v', 'int');
                 break;
-            case NativeOp.BIT_XOR.opcode:
-                // TODO: allow doubles
+            case NativeOp.BIT_LSHIFT.opcode:
                 this.writePop(sb, '_tmp2', 'int');
                 this.writePop(sb, '_tmp1', 'int');
-                this.writePushNewValue(sb, '_tmp1.v ^ _tmp2.v', 'int');
+                this.writePushNewValue(sb, '_tmp1.v << _tmp2.v', 'int');
+                break;
+            case NativeOp.BIT_RSHIFT.opcode:
+                this.writePop(sb, '_tmp2', 'int');
+                this.writePop(sb, '_tmp1', 'int');
+                this.writePushNewValue(sb, '_tmp1.v >> _tmp2.v', 'int');
+                break;
+            case NativeOp.BIT_URSHIFT.opcode:
+                this.writePop(sb, '_tmp2', 'int');
+                this.writePop(sb, '_tmp1', 'int');
+                this.writePushNewValue(sb, '_tmp1.v >>> _tmp2.v', 'int');
                 break;
             case NativeOp.EQUALS.opcode:
                 // TODO: allow doubles
@@ -276,6 +282,12 @@ var JITCompiler = /** @class */ (function () {
                 }
                 this.writePushNewValue(sb, JSON.stringify(v), 'string');
                 break;
+            case NativeOp.DUP.opcode:
+                if (constID === 0) {
+                    throw new Error('Bytecode error: cannot DUP 0 at index ' + index);
+                }
+                sb.push('\t', '_stack.push(_stack.getValue(_stack.length() - ', constID, '));\n');
+                break;
             case NativeOp.STORE.opcode:
                 var name_1 = JSON.stringify(this.jsonCodeObject.names[constID]);
                 sb.push('\t', '_scope.store(', name_1, ', _stack.popAny());\n');
@@ -323,7 +335,7 @@ var JITCompiler = /** @class */ (function () {
     JITCompiler.prototype.writeJustLoaded = function (sb, varName) {
         sb.push('\t', 'if(', varName, '.type === "immediate_function") {\n', '\t\t', varName, '.q();\n', '\t', '} else if(', varName, '.type === "js_function") {\n', '\t\t', '_stack.push(_NATIVE.wrapJSFunction(', varName, ', _stacks));\n', '\t', '} else {\n', '\t\t', '_stack.push(', varName, ');\n', '\t', '}\n');
     };
-    JITCompiler.opCodesWithConstants = NativeOp.CONST_INT.opcode + NativeOp.CONST_DOUBLE.opcode + NativeOp.CONST_STRING.opcode + NativeOp.CONST_QUOTE.opcode + NativeOp.STORE.opcode + NativeOp.STORE_QUOTE.opcode + NativeOp.LOAD_FAST.opcode + NativeOp.LOAD_SLOW.opcode;
+    JITCompiler.opCodesWithConstants = NativeOp.CONST_INT.opcode + NativeOp.CONST_DOUBLE.opcode + NativeOp.CONST_STRING.opcode + NativeOp.CONST_QUOTE.opcode + NativeOp.DUP.opcode + NativeOp.STORE.opcode + NativeOp.STORE_QUOTE.opcode + NativeOp.LOAD_FAST.opcode + NativeOp.LOAD_SLOW.opcode;
     return JITCompiler;
 }());
 var isArray = (Array.isArray || function (arg) {

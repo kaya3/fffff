@@ -78,6 +78,13 @@ class Parser {
 		} else if(c === '!') {
 			++this.pos;
 			q.ops.push(NativeOp.NOW);
+		} else if(c === '@') {
+			let i: number = 0;
+			do {
+				++this.pos;
+				++i;
+			} while(this.pos < this.src.length && this.src[this.pos] === '@');
+			q.ops.push(new DupOp(i));
 		} else if(c === '.') {
 			if(++this.pos === this.src.length) {
 				throw new Error("Syntax error: unexpected end of source: expected .[ or .{ or .identifier");
@@ -122,7 +129,7 @@ class Parser {
 			this.stepStringLiteral(q);
 		} else if(this.digitChar(c) || (c === '-' && this.pos+1 < this.src.length && this.digitChar(this.src[this.pos+1]))) {
 			q.ops.push(new PushOp(this.nextNumber()));
-		} else if(c === '>' && this.pos+1 < this.src.length && (this.identifierChar(this.src[this.pos+1]) || this.src[this.pos+1] === '!')) {
+		} else if((c === '<' || c === '>') && this.pos+1 < this.src.length && (this.identifierChar(this.src[this.pos+1]) || (c === '>' && this.src[this.pos+1] === '!'))) {
 			class Assignment {
 				readonly names: Array<string> = [];
 				doNow: boolean = false;
@@ -132,7 +139,8 @@ class Parser {
 			let assignments: Array<Assignment> = [];
 			do {
 				let a: Assignment = new Assignment();
-				if(this.src[++this.pos] === '!') {
+				++this.pos;
+				if(c === '>' && this.src[this.pos] === '!') {
 					a.doNow = true;
 					++this.pos;
 				}
@@ -145,13 +153,13 @@ class Parser {
 			} while(this.pos < this.src.length && this.src[this.pos] === ',');
 			
 			while(assignments.length) {
-				let a: Assignment = assignments.pop() as Assignment;
+				let a: Assignment = (c === '<' ? assignments.shift() : assignments.pop()) as Assignment;
 				let scopes: number = 0;
 				while(true) {
 					let name: string = a.names.shift() as string;
 					
 					if(!a.names.length) {
-						q.ops.push(new AssignOp(name, a.doNow));
+						q.ops.push(c === '<' ? new LocalReadOp(name) : new AssignOp(name, a.doNow));
 						break;
 					} else {
 						q.ops.push(scopes === 0 ? new ReadOp(name) : new LocalReadOp(name));

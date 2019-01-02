@@ -1,5 +1,6 @@
 type Op
 	= PushOp
+	| DupOp
 	| ReadOp
 	| LocalReadOp
 	| AssignOp
@@ -62,6 +63,18 @@ class CommentOp {
 	}
 }
 
+class DupOp {
+	public constructor(public readonly i: number) {}
+	
+	public compile(constants: Constants): string {
+		return NativeOp.DUP.opcode + this.i;
+	}
+	
+	public repr(): string {
+		return new Array(this.i + 1).join('@');
+	}
+}
+
 class ReadOp {
 	public constructor(public readonly name: string) {}
 	
@@ -82,7 +95,7 @@ class LocalReadOp {
 	}
 	
 	public repr(): string {
-		return this.name;
+		return '<' + this.name;
 	}
 }
 
@@ -108,6 +121,7 @@ class NativeOp {
 	
 	public static readonly NOW: NativeOp = new NativeOp('!', '!');
 	
+	public static readonly DUP: NativeOp = new NativeOp(null, '@');
 	public static readonly STORE: NativeOp = new NativeOp(null, 's');
 	public static readonly STORE_QUOTE: NativeOp = new NativeOp(null, 'q');
 	public static readonly LOAD_FAST: NativeOp = new NativeOp(null, 'l');
@@ -156,6 +170,9 @@ class NativeOp {
 	public static readonly BIT_OR: NativeOp = new NativeOp('|', '|');
 	public static readonly BIT_NEG: NativeOp = new NativeOp('~', '~');
 	public static readonly BIT_XOR: NativeOp = new NativeOp('^', '^');
+	public static readonly BIT_LSHIFT: NativeOp = new NativeOp('<<', 'W');
+	public static readonly BIT_RSHIFT: NativeOp = new NativeOp('>>', 'm');
+	public static readonly BIT_URSHIFT: NativeOp = new NativeOp('>>>', 'M');
 	
 	public static readonly EQUALS: NativeOp = new NativeOp('=', '=');
 	public static readonly LESS_THAN: NativeOp = new NativeOp('<', 'c');

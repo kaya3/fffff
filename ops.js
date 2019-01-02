@@ -56,6 +56,18 @@ var CommentOp = /** @class */ (function () {
     };
     return CommentOp;
 }());
+var DupOp = /** @class */ (function () {
+    function DupOp(i) {
+        this.i = i;
+    }
+    DupOp.prototype.compile = function (constants) {
+        return NativeOp.DUP.opcode + this.i;
+    };
+    DupOp.prototype.repr = function () {
+        return new Array(this.i + 1).join('@');
+    };
+    return DupOp;
+}());
 var ReadOp = /** @class */ (function () {
     function ReadOp(name) {
         this.name = name;
@@ -76,7 +88,7 @@ var LocalReadOp = /** @class */ (function () {
         return NativeOp.LOAD_FAST.compile(constants) + constants.addName(this.name);
     };
     LocalReadOp.prototype.repr = function () {
-        return this.name;
+        return '<' + this.name;
     };
     return LocalReadOp;
 }());
@@ -118,6 +130,7 @@ var NativeOp = /** @class */ (function () {
     NativeOp.SCOPE_ENTER = new NativeOp('.{', 'E');
     NativeOp.SCOPE_EXIT = new NativeOp('}.', 'X');
     NativeOp.NOW = new NativeOp('!', '!');
+    NativeOp.DUP = new NativeOp(null, '@');
     NativeOp.STORE = new NativeOp(null, 's');
     NativeOp.STORE_QUOTE = new NativeOp(null, 'q');
     NativeOp.LOAD_FAST = new NativeOp(null, 'l');
@@ -156,6 +169,9 @@ var NativeOp = /** @class */ (function () {
     NativeOp.BIT_OR = new NativeOp('|', '|');
     NativeOp.BIT_NEG = new NativeOp('~', '~');
     NativeOp.BIT_XOR = new NativeOp('^', '^');
+    NativeOp.BIT_LSHIFT = new NativeOp('<<', 'W');
+    NativeOp.BIT_RSHIFT = new NativeOp('>>', 'm');
+    NativeOp.BIT_URSHIFT = new NativeOp('>>>', 'M');
     NativeOp.EQUALS = new NativeOp('=', '=');
     NativeOp.LESS_THAN = new NativeOp('<', 'c');
     NativeOp.GREATER_THAN = new NativeOp('>', 'h');

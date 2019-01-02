@@ -115,6 +115,12 @@ function decompile(jsonCodeObject, index) {
                 }
                 op = new PushOp(new StringValue(v));
             }
+            else if (c === NativeOp.DUP.opcode) {
+                if (constID === 0) {
+                    throw new Error('Bytecode error: cannot DUP 0 at index ' + index);
+                }
+                op = new DupOp(constID);
+            }
             else {
                 var name_1 = jsonCodeObject.names[constID];
                 switch (c) {
