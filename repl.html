@@ -26,8 +26,8 @@ var parser, interpreter, repl = ConsoleApp({
 		}
 	},
 	onError: function(e) {
-		repl.println(e.message);
-		repl.println(interpreter.stackTrace());
+		repl.println(e.message, 'color: red');
+		repl.println(interpreter.stackTrace(), 'color: red');
 		repl.println('\n' + interpreter.toString());
 	},
 });
