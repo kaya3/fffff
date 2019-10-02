@@ -34,6 +34,7 @@ var parser, interpreter, repl = ConsoleApp({
 function reset() {
 	parser = new Parser();
 	interpreter = new Interpreter(repl.println);
+	repl.clear();
 	repl.println('fffff REPL\n\n');
 	repl.println(interpreter.toString());
 }
