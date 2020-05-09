@@ -3,7 +3,7 @@
 **fffff** is a stack based concatenative programming language.
 
 This project provides an implementation of fffff in Javascript (actually Typescript).
-The implementation includes an interpreter with a REPL, and a compiler to Javascript.
+The implementation includes an interpreter with a [REPL](https://kaya3.github.io/fffff/repl.html), and a [compiler to Javascript](https://kaya3.github.io/fffff/compiler.html).
 
 ## How do I program in fffff?
 
