@@ -31,21 +31,21 @@ The classic Fizzbuzz problem:
     # five := n % 5 = 0
     n 5 % 0 = >five
     
-    # if three: push "fizz" to the stack
-    ("fizz") three if
-    # if five: push "buzz" to the stack
-    ("buzz") five if
-    # if not (three or five): push n to the stack
-    (n) three five or not if
-    
-    # print what's on the stack
-    println
+    # if three: print "fizz"
+    ("fizz" print) three if
+    # if five: print "buzz"
+    ("buzz" print) five if
+    # if not (three or five): print n
+    (n print) three five or not if
+
+    # print a newline
+    "" println
 ) >!print_num
 
 # n := 1
 1 >n
 
-# do (print_num; n := n + 1) 100 times
+# call (print_num; n := n + 1) 100 times
 (print_num n 1 + >n) 100 repeat
 ```
 
