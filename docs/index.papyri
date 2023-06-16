@@ -1,7 +1,30 @@
+@fn fa_anchor($_icon: str, $href?: str) $v: inline -> {
+    <a class="anchor" href?=$href>
+        <i class="anchor-icon fas $_icon"/>
+        $v
+    </a>
+}
 
-@title{fffff Documentation}
+@fn h1 $t: inline -> {
+    <h1>@fa_anchor(`fa-link`, href="") $t</h1>
+}
 
-@b{fffff} is a @href(`https://en.wikipedia.org/wiki/Stack-oriented_programming`) {stack-oriented} @href(`https://en.wikipedia.org/wiki/Concatenative_programming_language`) {concatenative programming language}.
+@fn h2 $t: inline -> {
+    @let(id=@str::unique_id $t)
+    <h2 id=$id>@fa_anchor(`fa-hashtag`, href="\#$id") $t</h2>
+}
+
+@fn info $v: html -> {
+    @fa_anchor(`fa-info-circle`).
+    <div class="info panel">$v</div>
+}
+
+
+
+@page(title={fffff Documentation})...
+@h1 {fffff Documentation}
+
+@b {fffff} is a @href(`https://en.wikipedia.org/wiki/Stack-oriented_programming`) {stack-oriented} @href(`https://en.wikipedia.org/wiki/Concatenative_programming_language`) {concatenative programming language}.
 It has @href(`https://en.wikipedia.org/wiki/Type_system#Dynamic_type_checking_and_runtime_type_information`) {dynamic types}, and @href(`https://en.wikipedia.org/wiki/First-class_citizen`) {first-class} @href(`https://en.wikipedia.org/wiki/Scope_(computer_science)#Dynamic_scoping`) {dynamic scopes}.
 fffff is designed to be easy to implement, not easy to write in.
 
@@ -23,7 +46,7 @@ Programming in fffff is a mixture of low-level stack manipulation and high-level
 
 
 
-@subtitle{Numbers}
+@h2 {Numbers}
 
 The only numeric type is a signed 32-bit integer.
 An integer literal is written in decimal, with a leading~`-` for negative numbers.
@@ -45,7 +68,7 @@ Operations take their operands off the stack and push their results to the stack
 
 
 
-@subtitle{Booleans}
+@h2 {Booleans}
 
 The keywords `true` and `false` are Boolean literals.
 They are instructions which, when executed, push their own value to the stack.
@@ -57,7 +80,7 @@ The logical operations `and` and `or` are not @href(`https://en.wikipedia.org/wi
 
 
 
-@subtitle{Strings}
+@h2 {Strings}
 
 A string literal is delimited by an odd number of single-quote characters~`'`, or by an odd number of double-quote characters~`"`.
 The escape sequences `\'`, `\"`, `\\`, `\n`, `\r`, `\t`, `\b` and `\f` have their usual meanings.
@@ -68,7 +91,7 @@ It is a syntax error for a string literal delimited by one quote character to co
 
 
 
-@subtitle{Basic stack manipulation}
+@h2 {Basic stack manipulation}
 
 The `@` operation duplicates the top element of the stack.
 Repeating the `@` symbol gives a variation of this operation which duplicates an element further from the top of the stack; for example, `@@` duplicates the second-from-top element, `@@@` duplicates the third-from-top element, and so on.
@@ -78,7 +101,7 @@ This is equivalent to popping from the stack and discarding the result.
 
 
 
-@subtitle{Comments}
+@h2 {Comments}
 
 A line comment begins with a~`#`.
 Everything from this character until the line ending is ignored.
@@ -94,7 +117,7 @@ fffff does not have multiline comments, but they can be simulated with multi-lin
 
 
 
-@subtitle{Printing}
+@h2 {Printing}
 
 The keywords `print` and `println` each pop a value from the stack and print it to the console.
 The difference between them is that `println` also prints a newline.
@@ -108,7 +131,7 @@ If the value to be printed is not a string, it is first converted to a string.
 
 
 
-@subtitle{Variables}
+@h2 {Variables}
 
 A variable name begins with a letter or underscore, followed by any number of letters, digits or underscores.
 
@@ -124,21 +147,21 @@ For convenience, the instruction `>x,y` assigns them in order; this is equivalen
 Any number of variable names may be separated by commas in this way.
 You can also write `<x,y` when loading multiple variables, but this is equivalent to `<x <y`.
 
-While it is convenient to think of variables as having values, this is @b{not} technically accurate.
-In fffff, variables contain @b{instructions}, and named functions (such as `square` in the example above) are also variables.
+While it is convenient to think of variables as having values, this is @b {not} technically accurate.
+In fffff, variables contain @b {instructions}, and named functions (such as `square` in the example above) are also variables.
 The operation `>x` does not really store the @emph{value} in the variable `x`; rather, it stores an instruction in the variable `x` to push that value to the stack.
 This matters because where a variable is defined as a function, it may do something other than simply push a stored value to the stack.
 
 
 
-@subtitle{Quotes}
+@h2 {Quotes}
 
-A @b{quote} is analagous to a @href(`https://en.wikipedia.org/wiki/Anonymous_function`) {function literal} in other languages.
+A @b {quote} is analagous to a @href(`https://en.wikipedia.org/wiki/Anonymous_function`) {function literal} in other languages.
 Quotes are delimited by round brackets,~`(` and `)`.
 Instructions between these brackets are not executed immediately; rather, the quote itself is pushed to the stack, and its instructions will be executed whenever the quote is "called".
 The operation~`!` pops a quote from the stack, and calls it.
 
-Variable names inside quotes are resolved when the quote is called, @b{not} evaluated or bound when the quote is written.
+Variable names inside quotes are resolved when the quote is called, @b {not} evaluated or bound when the quote is written.
 Quotes may occur inside other quotes.
 
 Quotes are immutable, and are first-class objects.
@@ -147,11 +170,11 @@ A quote can be pushed to a stack or stored in a variable.
 When a quote is stored in a variable with an instruction such as `>f`, the variable `f` contains an instruction to push the quote to the stack; not to call it.
 The quote can be called by writing `f!`, which uses the `!` operation to call the quote.
 
-Alternatively, the syntax~`>!f` can be used to make `f` a @b{function} --- the variable `f` holds an instruction to call the quote, so that the quote can be called simply by writing `f`.
+Alternatively, the syntax~`>!f` can be used to make `f` a @b {function} --- the variable `f` holds an instruction to call the quote, so that the quote can be called simply by writing `f`.
 
 
 
-@subtitle{Control flow}
+@h2 {Control flow}
 
 The keyword `repeat` is a looping instruction which calls a quote repeatedly.
 Its operands are the quote and the number of repetitions.
@@ -171,19 +194,19 @@ The following example prints the word "Hello" if `x` equals `y`, otherwise it do
 
 
 
-@subtitle{Stacks}
+@h2 {Stacks}
 
 Unlike other stack-based languages which use a single stack, fffff allows the use of local stacks.
 
-A left square bracket~`[` creates a new local stack and @b{descends} to it.
-A right square bracket~`]` @b{ascends} from it.
-These are separate operations; in particular, it is @b{not} a syntax error for them to be unmatched.
+A left square bracket~`[` creates a new local stack and @b {descends} to it.
+A right square bracket~`]` @b {ascends} from it.
+These are separate operations; in particular, it is @b {not} a syntax error for them to be unmatched.
 
 Stacks are mutable, and are first-class objects.
 A reference to a stack can be pushed to another stack (or itself), or "stored" in a variable.
 
-The operation~`.[` @b{enters} a stack by popping a reference from the current stack, and descending to the stack at that reference.
-The operation~`].` @b{exits} the current stack by ascending from it and pushing a reference to it to the new current stack.
+The operation~`.[` @b {enters} a stack by popping a reference from the current stack, and descending to the stack at that reference.
+The operation~`].` @b {exits} the current stack by ascending from it and pushing a reference to it to the new current stack.
 For example, `[1 2 3].` creates a stack containing the numbers 1, 2, 3, leaving a reference to it on the current stack.
 
 @info {
@@ -204,13 +227,13 @@ The keyword `stack` pushes a reference to the current stack to the current stack
 
 
 
-@subtitle{The metastack}
+@h2 {The metastack}
 
-There is a special "stack of stacks" called the @b{metastack}, which is manipulated when descending to or ascending from a stack.
-The @b{current stack} is the one at the top of the metastack.
+There is a special "stack of stacks" called the @b {metastack}, which is manipulated when descending to or ascending from a stack.
+The @b {current stack} is the one at the top of the metastack.
 Unless otherwise specified, in this documentation the phrase "the stack" means the current stack.
 
-Initially, the metastack contains a single empty stack, which is the @b{global stack}.
+Initially, the metastack contains a single empty stack, which is the @b {global stack}.
 Descending to a stack pushes it to the metastack, making it the current stack.
 Ascending from the current stack pops it from the metastack.
 It is a runtime error to ascend from the global stack leaving the metastack empty.
@@ -219,14 +242,14 @@ The metastack is not a first-class object; there is no way to obtain a reference
 
 
 
-@subtitle{Scopes}
+@h2 {Scopes}
 
 A scope contains variables, each of which is a name associated with an instruction.
 The instruction is either to push a value to the stack, or to call a quote.
 
 A left curly brace~`{` descends to a new local scope.
 A right curly brace~`}` ascends from it.
-These are separate operations; in particular, it is @b{not} a syntax error for them to be unmatched.
+These are separate operations; in particular, it is @b {not} a syntax error for them to be unmatched.
 
 Scopes are mutable, and are first-class objects.
 A reference to a scope can be pushed to a stack, or "stored" in a variable.
@@ -245,12 +268,12 @@ The keyword `this` pushes a reference to the current scope to the current stack.
 
 
 
-@subtitle{The scopestack}
+@h2 {The scopestack}
 
-Like the metastack, there is a special "stack of scopes" called the @b{scopestack}, which is manipulated when descending to or ascending from a scope.
-The @b{current scope} is the one at the top of the scopestack.
+Like the metastack, there is a special "stack of scopes" called the @b {scopestack}, which is manipulated when descending to or ascending from a scope.
+The @b {current scope} is the one at the top of the scopestack.
 
-Initially, the scopestack contains a single empty scope, which is the @b{global scope}.
+Initially, the scopestack contains a single empty scope, which is the @b {global scope}.
 Descending to a scope pushes it to the scopestack, making it the current scope.
 Ascending from the current scope pops it from the scopestack.
 It is a runtime error to ascend from the global scope leaving the scopestack empty.

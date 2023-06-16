@@ -1,6 +1,8 @@
 "use strict";
 function typecheck(v, typeTag) {
-    return (v.type === typeTag || (v.type === 'js_object' && typeTag === 'scope')) ? v : _ERROR.wrongType(v.type, typeTag);
+    return (v.type === typeTag || (v.type === 'js_object' && typeTag === 'scope'))
+        ? v
+        : _ERROR.wrongType(v.type, typeTag);
 }
 var StringValue = /** @class */ (function () {
     function StringValue(v) {

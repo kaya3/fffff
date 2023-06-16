@@ -101,7 +101,7 @@ var JITCompiler = /** @class */ (function () {
                 sb.push('\t', '_OUT(_tmp1.toString() + "\\n");\n');
                 break;
             case NativeOp.DEL.opcode:
-                sb.push('_stack.popAny();\n');
+                sb.push('\t', '_stack.popAny();\n');
                 break;
             case NativeOp.PUSH.opcode:
                 this.writePopAny(sb, '_tmp1');

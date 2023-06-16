@@ -1,6 +1,6 @@
 # fffff - the silliest stack-based concatenative language
 
-**fffff** is a stack based concatenative programming language.
+**fffff** is a stack-based concatenative programming language.
 
 This project provides an implementation of fffff in Javascript (actually Typescript).
 The implementation includes an interpreter with a REPL, and a compiler to Javascript.

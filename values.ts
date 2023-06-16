@@ -19,7 +19,9 @@ type ValueTypeTags = {
 };
 
 function typecheck<T extends Value['type']>(v: Value, typeTag: T): ValueTypeTags[T] {
-	return (v.type === typeTag || ((v.type as string) === 'js_object' && typeTag === 'scope')) ? v : _ERROR.wrongType(v.type, typeTag);
+	return (v.type === typeTag || ((v.type as string) === 'js_object' && typeTag === 'scope'))
+		? v as ValueTypeTags[T]
+		: _ERROR.wrongType(v.type, typeTag);
 }
 
 class StringValue {

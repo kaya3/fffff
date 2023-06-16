@@ -144,7 +144,7 @@ class JITCompiler {
 				break;
 			
 			case NativeOp.DEL.opcode:
-				sb.push('_stack.popAny();\n');
+				sb.push('\t', '_stack.popAny();\n');
 				break;
 			
 			case NativeOp.PUSH.opcode:
